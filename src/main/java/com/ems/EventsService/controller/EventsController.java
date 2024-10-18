@@ -4,7 +4,9 @@ import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.services.AuthService;
 import com.ems.EventsService.services.EventsService;
 
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,7 +19,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/ems/events")
 @RequiredArgsConstructor
-public class EventsController
+@Tag(name = "Events", description = "Events Management API")public class EventsController
 {
     @Autowired
     private EventsService eventsService;
@@ -26,6 +28,7 @@ public class EventsController
     private AuthService authService;
     @PostMapping("/add")
     @ResponseStatus(HttpStatus.CREATED)
+    @Operation(summary = "Create a new event", description = "Creates a new event in the system")
     public ResponseEntity<String> createEvent(@RequestHeader("Authorization") String token, @Valid @RequestBody EventsModel eventsModel) {
         if (!authService.isAdmin(token.substring(7))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");

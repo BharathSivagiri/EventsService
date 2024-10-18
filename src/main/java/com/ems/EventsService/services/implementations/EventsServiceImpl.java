@@ -10,8 +10,8 @@ import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRepository;
 import com.ems.EventsService.services.EventsService;
 import com.ems.EventsService.dto.ParticipantEventDTO;
-
 import com.ems.EventsService.utility.DateUtils;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
