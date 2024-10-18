@@ -1,5 +1,6 @@
 package com.ems.EventsService.interceptor;
 
+import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.services.AuthService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -21,11 +22,14 @@ public class AuthTokenInterceptor implements HandlerInterceptor {
             return false;
         }
 
-        token = token.substring(7);
-        if (!authService.validateToken(token)) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired token");
+        try {
+            token = token.substring(7);
+            authService.validateToken(token);
+        } catch (BusinessValidationException e) {
+            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
             return false;
         }
+
 
         return true;
     }

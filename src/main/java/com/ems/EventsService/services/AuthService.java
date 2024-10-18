@@ -3,13 +3,17 @@ package com.ems.EventsService.services;
 import com.ems.EventsService.entity.AuthToken;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
+import com.ems.EventsService.enums.UsersType;
+import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.repositories.AuthTokenRepository;
 import com.ems.EventsService.repositories.UsersRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -21,22 +25,25 @@ public class AuthService {
     @Autowired
     private AuthTokenRepository authTokenRepository;
 
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
     public String authenticateUser(String username, String password) {
         Users user = usersRepository.findByUsername(username)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new BusinessValidationException("User not found"));
 
         if (!password.equals(user.getPassword())) {
-            throw new RuntimeException("Invalid password");
+            throw new BusinessValidationException("Invalid password");
         }
 
         return generateToken(user);
     }
 
-
     private String generateToken(Users user) {
+        // Invalidate existing tokens for the user
+        List<AuthToken> existingTokens = authTokenRepository.findByUserIdAuthAndRecStatus(user.getUserId(), DBRecordStatus.ACTIVE);
+        for (AuthToken token : existingTokens) {
+            token.setRecStatus(DBRecordStatus.INACTIVE);
+        }
+        authTokenRepository.saveAll(existingTokens);
+
         String token = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
@@ -57,17 +64,38 @@ public class AuthService {
         return token;
     }
 
-    public boolean validateToken(String token) {
+    public boolean isAdmin(String token) {
         AuthToken authToken = authTokenRepository.findByAuthToken(token)
-                .orElseThrow(() -> new RuntimeException("Invalid token"));
+                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
 
-        if (authToken.getResetTime().isBefore(LocalDateTime.now())) {
+        Users user = usersRepository.findById(authToken.getUserIdAuth())
+                .orElseThrow(() -> new BusinessValidationException("User not found"));
+
+        return user.getUserType() == UsersType.ADMIN;
+    }
+
+    public void validateToken(String token) {
+        AuthToken authToken = authTokenRepository.findByAuthToken(token)
+                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
+
+        LocalDateTime now = LocalDateTime.now();
+        if (now.isAfter(authToken.getResetTime())) {
             authToken.setRecStatus(DBRecordStatus.INACTIVE);
             authTokenRepository.save(authToken);
-            return false;
+            throw new BusinessValidationException("Token has expired");
         }
+    }
 
-        return true;
+    public int getUserIdFromToken(String token) {
+        AuthToken authToken = authTokenRepository.findByAuthToken(token)
+                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
+        return authToken.getUserIdAuth();
+    }
+
+    @Scheduled(fixedRate = 120000) // Run every 2 minutes
+    public void cleanupExpiredTokens() {
+        LocalDateTime now = LocalDateTime.now();
+        List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBefore(now);
+        authTokenRepository.deleteAll(expiredTokens);
     }
 }
-
