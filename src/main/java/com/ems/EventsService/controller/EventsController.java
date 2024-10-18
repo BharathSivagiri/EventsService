@@ -44,10 +44,9 @@ import java.util.List;
     }
 
     @PutMapping("/update/{eventId}")
+    @Operation(summary = "Updating a event", description = "Updates a existing event in the system")
     public ResponseEntity<String> updateEvent(
-            @RequestHeader("Authorization") String token,
-            @Parameter(description = "ID of the event to be updated") @PathVariable Integer eventId,
-            @Parameter(description = "Updated event details") @RequestBody EventsModel eventsModel) {
+            @RequestHeader("Authorization") String token, @PathVariable Integer eventId, @RequestBody EventsModel eventsModel) {
         if (!authService.isAdmin(token.substring(7))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
         }
@@ -56,6 +55,7 @@ import java.util.List;
     }
 
     @DeleteMapping("/delete/{eventId}")
+    @Operation(summary = "Deleting the event", description = "Changes the record status from active to inactive")
     public ResponseEntity<String> deleteEvent(@RequestHeader("Authorization") String token, @PathVariable Integer eventId) {
         if (!authService.isAdmin(token.substring(7))) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
@@ -65,6 +65,7 @@ import java.util.List;
     }
 
     @GetMapping("/view")
+    @Operation(summary = "View all events", description = "Retrieves all active events based on user access level")
     public ResponseEntity<?> getAllEvents(
             @RequestHeader("Authorization") String token,
             @RequestParam(required = false) String keyword) {
@@ -72,7 +73,5 @@ import java.util.List;
         List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "");
         return ResponseEntity.ok(events);
     }
-
-
 
 }
