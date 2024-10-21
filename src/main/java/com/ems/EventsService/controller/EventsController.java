@@ -82,20 +82,17 @@ public class EventsController
     }
 
     @PostMapping("/registration")
+    @Operation(summary = "Register for an event", description = "Allows a user to register for an event")
     public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData) {
         String transactionId = registrationData.get("transactionId");
         String eventId = registrationData.get("eventId");
+        String userId = registrationData.get("userId");
         String createdBy = registrationData.get("createdBy");
 
-        logger.info("Received registration request - transactionId: {}, eventId: {}, createdBy: {}",
-                transactionId, eventId, createdBy);
+        logger.info("Received registration request - transactionId: {}, eventId: {}, userId: {}, createdBy: {}",
+                transactionId, eventId, userId, createdBy);
 
-        if (transactionId == null || transactionId.isEmpty()) {
-            logger.error("Transaction ID is null or empty");
-            return ResponseEntity.badRequest().body("Transaction ID is required");
-        }
-
-        EventsRegistration registration = eventsService.registerForEvent(transactionId, eventId, createdBy);
+        EventsRegistration registration = eventsService.registerForEvent(transactionId, eventId, userId, createdBy);
 
         logger.info("Registration completed - registrationId: {}, transactionId: {}",
                 registration.getId(), registration.getTransactionId());
@@ -104,6 +101,7 @@ public class EventsController
                 .body("Successfully registered for event with ID: " + eventId +
                         ". Registration ID: " + registration.getId());
     }
+
 }
 
 

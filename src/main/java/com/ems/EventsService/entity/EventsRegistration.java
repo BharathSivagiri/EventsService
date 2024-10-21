@@ -18,13 +18,11 @@ public class EventsRegistration {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne
-    @JoinColumn(name = "event_id_fk", referencedColumnName = "id", insertable = false, updatable = false)
-    private Events event;
+    @Column(name = "event_id")
+    private Integer eventId;
 
-    @ManyToOne
-    @JoinColumn(name = "user_id_fk", referencedColumnName = "id", insertable = false, updatable = false)
-    private Users users;
+    @Column(name = "user_id")
+    private Integer userId;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "registration_status")

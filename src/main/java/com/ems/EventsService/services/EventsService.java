@@ -15,6 +15,6 @@ public interface EventsService
 
     List<?> getAllEvents(boolean isAdmin, String keyword);
 
-    EventsRegistration registerForEvent(String transactionId, String eventId, String createdBy);
+    EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy);
 
 }
