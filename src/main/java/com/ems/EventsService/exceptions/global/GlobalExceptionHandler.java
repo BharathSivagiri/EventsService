@@ -1,6 +1,7 @@
 package com.ems.EventsService.exceptions.global;
 
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;

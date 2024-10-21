@@ -37,7 +37,6 @@ public class AuthService {
     }
 
     private String generateToken(Users user) {
-        // Invalidate existing tokens for the user
         List<AuthToken> existingTokens = authTokenRepository.findByUserIdAuthAndRecStatus(user.getUserId(), DBRecordStatus.ACTIVE);
         for (AuthToken token : existingTokens) {
             token.setRecStatus(DBRecordStatus.INACTIVE);
@@ -50,7 +49,7 @@ public class AuthService {
         AuthToken authToken = new AuthToken();
         authToken.setUserIdAuth(user.getUserId());
         authToken.setCreationTime(now);
-        authToken.setValidFor(120); // 2 minutes
+        authToken.setValidFor(120); //120 Seconds = 2 Minutes
         authToken.setResetTime(now.plusMinutes(2));
         authToken.setAuthToken(token);
         authToken.setRecStatus(DBRecordStatus.ACTIVE);
@@ -92,7 +91,7 @@ public class AuthService {
         return authToken.getUserIdAuth();
     }
 
-    @Scheduled(fixedRate = 120000) // Run every 2 minutes
+    @Scheduled(fixedRate = 120000)
     public void cleanupExpiredTokens() {
         LocalDateTime now = LocalDateTime.now();
         List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBefore(now);

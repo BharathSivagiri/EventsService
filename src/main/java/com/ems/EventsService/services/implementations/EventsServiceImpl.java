@@ -9,7 +9,6 @@ import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
 import com.ems.EventsService.mapper.EventsMapper;
 import com.ems.EventsService.model.EventsModel;
-import com.ems.EventsService.model.PaymentTransactionModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
 import com.ems.EventsService.services.EventsService;
