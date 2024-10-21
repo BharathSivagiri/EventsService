@@ -1,12 +1,16 @@
 package com.ems.EventsService.services.implementations;
 
 import com.ems.EventsService.entity.Events;
+import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
+import com.ems.EventsService.enums.RegistrationStatus;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
 import com.ems.EventsService.mapper.EventsMapper;
 import com.ems.EventsService.model.EventsModel;
+import com.ems.EventsService.model.PaymentTransactionModel;
+import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
 import com.ems.EventsService.services.EventsService;
 import com.ems.EventsService.dto.ParticipantEventDTO;
@@ -24,6 +28,7 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -37,6 +42,9 @@ public class EventsServiceImpl implements EventsService
 
     @Autowired
     private EventsRepository eventsRepository;
+
+    @Autowired
+    private EventsRegistrationRepository eventsRegistrationRepository;
 
     @Autowired
     private EventsMapper eventsMapper;
@@ -162,6 +170,32 @@ public class EventsServiceImpl implements EventsService
         }
         logger.info("Fetching all events completed");
         return result;
+    }
+
+    @Override
+    @Transactional
+    public EventsRegistration registerForEvent(String transactionId, String eventId, String createdBy) {
+        logger.info("Registering for event - transactionId: {}, eventId: {}, createdBy: {}",
+                transactionId, eventId, createdBy);
+
+        Events event = eventsRepository.findById(Integer.parseInt(eventId))
+                .orElseThrow(() -> new BusinessValidationException("Event with ID '" + eventId + "' not found"));
+
+        EventsRegistration registration = new EventsRegistration();
+        registration.setEvent(event);
+        registration.setRegistrationStatus(RegistrationStatus.REGISTERED);
+        registration.setTransactionId(transactionId);
+        registration.setCreatedBy(createdBy);
+        registration.setCreatedDate(LocalDateTime.now().toString());
+        registration.setRecordStatus(DBRecordStatus.ACTIVE);
+        registration.setLastUpdatedDate(LocalDateTime.now().toString());
+        registration.setLastUpdatedBy(createdBy);
+
+        EventsRegistration savedRegistration = eventsRegistrationRepository.save(registration);
+        logger.info("Registration saved - registrationId: {}, transactionId: {}",
+                savedRegistration.getId(), savedRegistration.getTransactionId());
+
+        return savedRegistration;
     }
 }
 

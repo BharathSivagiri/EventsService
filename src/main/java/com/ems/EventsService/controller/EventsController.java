@@ -1,28 +1,35 @@
 package com.ems.EventsService.controller;
 
+import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.services.AuthService;
 import com.ems.EventsService.services.EventsService;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/ems/events")
 @RequiredArgsConstructor
-@Tag(name = "Events", description = "Events Management API")public class EventsController
+@Tag(name = "Events", description = "Events Management API")
+public class EventsController
 {
     @Autowired
     private EventsService eventsService;
+
+    private static final Logger logger = LoggerFactory.getLogger(EventsController.class);
+
 
     @Autowired
     private AuthService authService;
@@ -74,4 +81,29 @@ import java.util.List;
         return ResponseEntity.ok(events);
     }
 
+    @PostMapping("/registration")
+    public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData) {
+        String transactionId = registrationData.get("transactionId");
+        String eventId = registrationData.get("eventId");
+        String createdBy = registrationData.get("createdBy");
+
+        logger.info("Received registration request - transactionId: {}, eventId: {}, createdBy: {}",
+                transactionId, eventId, createdBy);
+
+        if (transactionId == null || transactionId.isEmpty()) {
+            logger.error("Transaction ID is null or empty");
+            return ResponseEntity.badRequest().body("Transaction ID is required");
+        }
+
+        EventsRegistration registration = eventsService.registerForEvent(transactionId, eventId, createdBy);
+
+        logger.info("Registration completed - registrationId: {}, transactionId: {}",
+                registration.getId(), registration.getTransactionId());
+
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body("Successfully registered for event with ID: " + eventId +
+                        ". Registration ID: " + registration.getId());
+    }
 }
+
+
