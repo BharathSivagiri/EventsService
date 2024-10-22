@@ -25,7 +25,6 @@ public class AuthService {
 
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
-
     @Autowired
     private UsersRepository usersRepository;
 
@@ -92,14 +91,14 @@ public class AuthService {
     @Scheduled(fixedRate = 120000)
     @Transactional
     public void updateExpiredTokens() {
-        logger.info("Updating expired tokens");
+//        logger.info("Updating expired tokens");
         LocalDateTime now = LocalDateTime.now();
         List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBeforeAndRecStatus(now, DBRecordStatus.ACTIVE);
-        logger.info("Found {} expired tokens", expiredTokens.size());
+//        logger.info("Found {} expired tokens", expiredTokens.size());
         for (AuthToken token : expiredTokens) {
             token.setRecStatus(DBRecordStatus.INACTIVE);
             authTokenRepository.save(token);
         }
-        logger.info("Finished updating expired tokens");
+//        logger.info("Finished updating expired tokens");
     }
 }

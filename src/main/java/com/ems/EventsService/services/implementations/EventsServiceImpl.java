@@ -32,7 +32,6 @@ import org.springframework.stereotype.Service;
 import org.thymeleaf.TemplateEngine;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.List;
@@ -171,10 +170,19 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
+        Events event = eventsRepository.findById(Integer.parseInt(eventId))
+                .orElseThrow(() -> new DataNotFoundException("Event not found with ID: " + eventId));
+
+        if (event.getEventCapacity() <= 0) {
+            throw new BusinessValidationException("Event is already at full capacity");
+        }
+
+        event.setEventCapacity(event.getEventCapacity() - 1);
+        eventsRepository.save(event);
+
         EventsRegistration registration = eventsRegistrationMapper.toEntity(transactionId, eventId, userId, createdBy);
         return eventsRegistrationRepository.save(registration);
     }
-
 
 
 }
