@@ -79,7 +79,6 @@ public class EventsController
         return ResponseEntity.ok("Event with ID " + eventId + " has been marked as inactive.");
     }
 
-
     @GetMapping("/view")
     @Operation(summary = "View all events", description = "Retrieves all active events based on user access level")
     public ResponseEntity<?> getAllEvents(

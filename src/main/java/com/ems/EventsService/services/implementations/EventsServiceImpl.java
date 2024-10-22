@@ -10,6 +10,8 @@ import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
 import com.ems.EventsService.mapper.EventsMapper;
+import com.ems.EventsService.mapper.EventsRegistrationMapper;
+import com.ems.EventsService.mapper.ParticipantEventDTOMapper;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
@@ -53,6 +55,13 @@ public class EventsServiceImpl implements EventsService
 
     @Autowired
     private EventsMapper eventsMapper;
+
+    @Autowired
+    private ParticipantEventDTOMapper participantEventDTOMapper;
+
+    @Autowired
+    private EventsRegistrationMapper eventsRegistrationMapper;
+
 
     @Autowired
     private JavaMailSender mailSender;
@@ -126,6 +135,7 @@ public class EventsServiceImpl implements EventsService
 
         return eventsMapper.toModel(updatedEvent);
     }
+
     @Override
     @Transactional
     public void deleteEvent(Integer eventId) {
@@ -146,32 +156,14 @@ public class EventsServiceImpl implements EventsService
     {
         logger.info("Fetching all events started");
         List<Events> events = isAdmin
-                ? eventsRepository.findByEventNameContainingIgnoreCase(keyword)
-                : eventsRepository.findByEventNameContainingIgnoreCaseAndRecStatus(keyword, DBRecordStatus.ACTIVE);
-
-        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+                ? eventsRepository.findByEventNameOrEventLocationContainingIgnoreCase(keyword, keyword)
+                : eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
         if (isAdmin) {
             result = events.stream().map(eventsMapper::toModel).collect(Collectors.toList());
         } else {
-            result = events.stream().map(event -> {
-                ParticipantEventDTO dto = new ParticipantEventDTO();
-                dto.setEventId(String.valueOf(event.getEventId()));
-                dto.setEventName(event.getEventName());
-                dto.setEventDescription(event.getEventDescription());
-                dto.setEventLocation(event.getEventLocation());
-                dto.setEventCapacity(event.getEventCapacity());
-                dto.setEventFee(String.valueOf(event.getEventFee()));
-                dto.setEventStatus(event.getEventStatus().toString());
-
-                if (event.getEventDate() != null) {
-                    LocalDate date = LocalDate.parse(event.getEventDate(), inputFormatter);
-                    dto.setEventDate(date.format(outputFormatter));
-                }
-                return dto;
-            }).collect(Collectors.toList());
+            result = events.stream().map(participantEventDTOMapper::toDTO).collect(Collectors.toList());
         }
         logger.info("Fetching all events completed");
         return result;
@@ -179,19 +171,11 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
-        EventsRegistration registration = new EventsRegistration();
-        registration.setEventId(Integer.parseInt(eventId));
-        registration.setUserId(Integer.parseInt(userId));
-        registration.setTransactionId(transactionId);
-        registration.setRegistrationStatus(RegistrationStatus.REGISTERED);
-        registration.setCreatedBy(createdBy);
-        registration.setCreatedDate(LocalDateTime.now().toString());
-        registration.setRecordStatus(DBRecordStatus.ACTIVE);
-        registration.setLastUpdatedDate(LocalDateTime.now().toString());
-        registration.setLastUpdatedBy(createdBy);
-
+        EventsRegistration registration = eventsRegistrationMapper.toEntity(transactionId, eventId, userId, createdBy);
         return eventsRegistrationRepository.save(registration);
     }
+
+
 
 }
 

@@ -5,9 +5,13 @@ import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.UsersType;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
+import com.ems.EventsService.mapper.AuthTokenMapper;
 import com.ems.EventsService.repositories.AuthTokenRepository;
 import com.ems.EventsService.repositories.UsersRepository;
 
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
@@ -19,11 +23,17 @@ import java.util.UUID;
 @Service
 public class AuthService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+
+
     @Autowired
     private UsersRepository usersRepository;
 
     @Autowired
     private AuthTokenRepository authTokenRepository;
+
+    @Autowired
+    private AuthTokenMapper authTokenMapper;
 
     public String authenticateUser(String username, String password) {
         Users user = usersRepository.findByUsername(username)
@@ -46,18 +56,7 @@ public class AuthService {
         String token = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
-        AuthToken authToken = new AuthToken();
-        authToken.setUserIdAuth(user.getUserId());
-        authToken.setCreationTime(now);
-        authToken.setValidFor(120); //120 Seconds = 2 Minutes
-        authToken.setResetTime(now.plusMinutes(2));
-        authToken.setAuthToken(token);
-        authToken.setRecStatus(DBRecordStatus.ACTIVE);
-        authToken.setCreatedBy(user.getUsername());
-        authToken.setCreatedDate(now.toString());
-        authToken.setUpdatedBy(user.getUsername());
-        authToken.setUpdatedDate(now.toString());
-
+        AuthToken authToken = authTokenMapper.toEntity(user, token, now);
         authTokenRepository.save(authToken);
 
         return token;
@@ -73,13 +72,10 @@ public class AuthService {
         return user.getUserType() == UsersType.ADMIN;
     }
 
+    @Transactional
     public void validateTokenWithUserId(String token, int userId) {
-        AuthToken authToken = authTokenRepository.findByAuthToken(token)
-                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
-
-        if (authToken.getRecStatus() == DBRecordStatus.INACTIVE) {
-            throw new BusinessValidationException("Token is inactive and cannot be used");
-        }
+        AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessValidationException("Invalid or inactive token"));
 
         if (authToken.getUserIdAuth() != userId) {
             throw new BusinessValidationException("UserId mismatch");
@@ -94,12 +90,16 @@ public class AuthService {
     }
 
     @Scheduled(fixedRate = 120000)
-    public void cleanupExpiredTokens() {
+    @Transactional
+    public void updateExpiredTokens() {
+        logger.info("Updating expired tokens");
         LocalDateTime now = LocalDateTime.now();
         List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBeforeAndRecStatus(now, DBRecordStatus.ACTIVE);
+        logger.info("Found {} expired tokens", expiredTokens.size());
         for (AuthToken token : expiredTokens) {
             token.setRecStatus(DBRecordStatus.INACTIVE);
+            authTokenRepository.save(token);
         }
-        authTokenRepository.saveAll(expiredTokens);
+        logger.info("Finished updating expired tokens");
     }
 }
