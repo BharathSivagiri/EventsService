@@ -14,5 +14,6 @@ public interface AuthTokenRepository extends JpaRepository<AuthToken, Integer>
     List<AuthToken> findByUserIdAuthAndRecStatus(int userIdAuth, DBRecordStatus recStatus);
     List<AuthToken> findByResetTimeBeforeAndRecStatus(LocalDateTime resetTime, DBRecordStatus recStatus);
     Optional<AuthToken> findByAuthTokenAndRecStatus(String authToken, DBRecordStatus recStatus);
+    Optional<AuthToken> findByAuthTokenAndRecStatusAndUserIdAuth(String authToken, DBRecordStatus recStatus, int userIdAuth);
 }
 

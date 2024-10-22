@@ -46,12 +46,6 @@ public class AuthService {
     }
 
     private String generateToken(Users user) {
-        List<AuthToken> existingTokens = authTokenRepository.findByUserIdAuthAndRecStatus(user.getUserId(), DBRecordStatus.ACTIVE);
-        for (AuthToken token : existingTokens) {
-            token.setRecStatus(DBRecordStatus.INACTIVE);
-        }
-        authTokenRepository.saveAll(existingTokens);
-
         String token = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
@@ -72,19 +66,23 @@ public class AuthService {
     }
 
     @Transactional
-    public void validateTokenWithUserId(String token, int userId) {
-        AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessValidationException("Invalid or inactive token"));
+    public void validateToken(String token, int userId) {
+        AuthToken authToken = authTokenRepository.findByAuthToken(token)
+                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
 
         if (authToken.getUserIdAuth() != userId) {
-            throw new BusinessValidationException("UserId mismatch");
+            throw new BusinessValidationException("User mismatch");
+        }
+
+        if (authToken.getRecStatus() != DBRecordStatus.ACTIVE) {
+            throw new BusinessValidationException("Token is expired");
         }
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(authToken.getResetTime())) {
             authToken.setRecStatus(DBRecordStatus.INACTIVE);
             authTokenRepository.save(authToken);
-            throw new BusinessValidationException("Token has expired");
+            throw new BusinessValidationException("Token is inactive");
         }
     }
 

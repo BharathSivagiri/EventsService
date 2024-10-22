@@ -30,15 +30,16 @@ public class EventsController
 
     private static final Logger logger = LoggerFactory.getLogger(EventsController.class);
 
-
     @Autowired
     private AuthService authService;
+
     @PostMapping("/add")
     @ResponseStatus(HttpStatus.CREATED)
     @Operation(summary = "Create a new event", description = "Creates a new event in the system")
     public ResponseEntity<String> createEvent(@RequestHeader("Authorization") String token,
                                               @RequestHeader("userId") int userId,
                                               @Valid @RequestBody EventsModel eventsModel) {
+        authService.validateToken(token, userId);
         if (!authService.isAdmin(token)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
         }
@@ -58,6 +59,7 @@ public class EventsController
             @RequestHeader("userId") int userId,
             @PathVariable Integer eventId,
             @RequestBody EventsModel eventsModel) {
+        authService.validateToken(token, userId);
         if (!authService.isAdmin(token)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
         }
@@ -72,6 +74,7 @@ public class EventsController
             @RequestHeader("Authorization") String token,
             @RequestHeader("userId") int userId,
             @PathVariable Integer eventId) {
+        authService.validateToken(token, userId);
         if (!authService.isAdmin(token)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
         }
@@ -85,6 +88,7 @@ public class EventsController
             @RequestHeader("Authorization") String token,
             @RequestHeader("userId") int userId,
             @RequestParam(required = false) String keyword) {
+        authService.validateToken(token, userId);
         boolean isAdmin = authService.isAdmin(token);
         List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "");
         return ResponseEntity.ok(events);
