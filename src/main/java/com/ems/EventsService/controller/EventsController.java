@@ -26,12 +26,12 @@ import java.util.Map;
 public class EventsController
 {
     @Autowired
-    private EventsService eventsService;
+    EventsService eventsService;
 
     private static final Logger logger = LoggerFactory.getLogger(EventsController.class);
 
     @Autowired
-    private AuthService authService;
+    AuthService authService;
 
     @PostMapping("/add")
     @ResponseStatus(HttpStatus.CREATED)

@@ -1,11 +1,10 @@
 package com.ems.EventsService.services.implementations;
 
+import com.ems.EventsService.entity.EmailTemplates;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
-import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
-import com.ems.EventsService.enums.RegistrationStatus;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
@@ -15,10 +14,10 @@ import com.ems.EventsService.mapper.ParticipantEventDTOMapper;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
-import com.ems.EventsService.repositories.UsersRepository;
 import com.ems.EventsService.services.EventsService;
-import com.ems.EventsService.dto.ParticipantEventDTO;
 import com.ems.EventsService.utility.DateUtils;
+import com.ems.EventsService.utility.constants.ErrorMessages;
+import com.ems.EventsService.repositories.EmailTemplatesRepository;
 
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
@@ -44,50 +43,49 @@ public class EventsServiceImpl implements EventsService
     private static final Logger logger = LoggerFactory.getLogger(EventsServiceImpl.class);
 
     @Autowired
-    private EventsRepository eventsRepository;
+    EventsRepository eventsRepository;
 
     @Autowired
-    private UsersRepository usersRepository;
+    EventsRegistrationRepository eventsRegistrationRepository;
 
     @Autowired
-    private EventsRegistrationRepository eventsRegistrationRepository;
+    EventsMapper eventsMapper;
 
     @Autowired
-    private EventsMapper eventsMapper;
+    ParticipantEventDTOMapper participantEventDTOMapper;
 
     @Autowired
-    private ParticipantEventDTOMapper participantEventDTOMapper;
+    EventsRegistrationMapper eventsRegistrationMapper;
 
     @Autowired
-    private EventsRegistrationMapper eventsRegistrationMapper;
-
-
-    @Autowired
-    private JavaMailSender mailSender;
+    EmailTemplatesRepository emailTemplatesRepository;
 
     @Autowired
-    private TemplateEngine tempEngine;
+    JavaMailSender mailSender;
+
+    @Autowired
+    TemplateEngine tempEngine;
 
     @PersistenceContext
-    private EntityManager entityManager;
+    EntityManager entityManager;
 
     @Override
     public EventsModel createEvent(EventsModel eventsModel)
     {
         logger.info("Event creation for " + eventsModel.getEventName() + " started");
         if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty()) {
-            throw new BusinessValidationException("Event name cannot be empty");
+            throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EMPTY);
         }
         if (eventsRepository.existsByEventName(eventsModel.getEventName())) {
-            throw new BusinessValidationException("An event with the name '" + eventsModel.getEventName() + "' already exists");
+            throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EXISTS);
         }
         if (eventsModel.getEventDate() == null) {
-            throw new BusinessValidationException("Event date cannot be null");
+            throw new BusinessValidationException(ErrorMessages.EVENT_DATE_NULL);
         }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
         LocalDate eventDate = LocalDate.parse(eventsModel.getEventDate(), formatter);
         if (eventDate.isBefore(LocalDate.now())) {
-            throw new BusinessValidationException("Event date cannot be in the past");
+            throw new BusinessValidationException(ErrorMessages.EVENT_DATE_PAST);
         }
         Events events = eventsMapper.toEntity(eventsModel);
         events.setCreatedBy("Admin");
@@ -105,7 +103,7 @@ public class EventsServiceImpl implements EventsService
         logger.info("Event update for ID {} started", eventId);
 
         Events existingEvent = eventsRepository.findById(eventId)
-                .orElseThrow(() -> new BusinessValidationException("Event with ID '" + eventId + "' not found"));
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.EVENT_NOT_FOUND));
 
         if (eventsModel.getEventName() != null) existingEvent.setEventName(eventsModel.getEventName());
         if (eventsModel.getEventDescription() != null) existingEvent.setEventDescription(eventsModel.getEventDescription());
@@ -117,7 +115,7 @@ public class EventsServiceImpl implements EventsService
             existingEvent.setEventDate(String.valueOf(DateUtils.convertToDate(eventsModel.getEventDate())));
         } catch (DateTimeParseException e)
         {
-            throw new DateInvalidException("Invalid date format. Please use yyyyMMdd format.");
+            throw new DateInvalidException(ErrorMessages.INVALID_DATE_FORMAT);
         }
 
         if (eventsModel.getEventStatus() != null) {
@@ -141,7 +139,7 @@ public class EventsServiceImpl implements EventsService
         logger.info("Soft delete for event with ID {} started", eventId);
 
         Events event = eventsRepository.findById(eventId)
-                .orElseThrow(() -> new BusinessValidationException("Event with ID '" + eventId + "' not found"));
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.EVENT_NOT_FOUND));
 
         event.setRecStatus(DBRecordStatus.INACTIVE);
 
@@ -171,10 +169,10 @@ public class EventsServiceImpl implements EventsService
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
         Events event = eventsRepository.findById(Integer.parseInt(eventId))
-                .orElseThrow(() -> new DataNotFoundException("Event not found with ID: " + eventId));
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
 
         if (event.getEventCapacity() <= 0) {
-            throw new BusinessValidationException("Event is already at full capacity");
+            throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
         }
 
         event.setEventCapacity(event.getEventCapacity() - 1);
@@ -184,6 +182,26 @@ public class EventsServiceImpl implements EventsService
         return eventsRegistrationRepository.save(registration);
     }
 
+    public String getUpdatedEventEmailContent(EventsModel updatedEvent, String userName) {
+        EmailTemplates template = emailTemplatesRepository.findByTemplateName("EVENT_UPDATED")
+                .orElseThrow(() -> new RuntimeException("Email template not found"));
+
+        String emailContent = template.getTemplateCode();
+
+        emailContent = emailContent.replace("{userName}", userName)
+                .replace("{eventName}", updatedEvent.getEventName())
+                .replace("{updatedDetails}", generateUpdatedDetailsString(updatedEvent));
+
+        return emailContent;
+    }
+
+    private String generateUpdatedDetailsString(EventsModel updatedEvent) {
+        StringBuilder details = new StringBuilder();
+        details.append("Date: ").append(updatedEvent.getEventDate()).append("<br>");
+        details.append("Location: ").append(updatedEvent.getEventLocation());
+
+        return details.toString();
+    }
 
 }
 
