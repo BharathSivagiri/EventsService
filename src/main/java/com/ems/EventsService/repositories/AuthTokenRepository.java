@@ -11,7 +11,7 @@ import java.util.Optional;
 public interface AuthTokenRepository extends JpaRepository<AuthToken, Integer>
 {
     Optional<AuthToken> findByAuthToken(String authToken);
-    List<AuthToken> findByResetTimeBefore(LocalDateTime time);
+    List<AuthToken> findByResetTimeBeforeAndRecStatus(LocalDateTime time, DBRecordStatus status);
     List<AuthToken> findByUserIdAuthAndRecStatus(int userIdAuth, DBRecordStatus recStatus);
 
 }

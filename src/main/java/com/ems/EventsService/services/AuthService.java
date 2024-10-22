@@ -73,9 +73,17 @@ public class AuthService {
         return user.getUserType() == UsersType.ADMIN;
     }
 
-    public void validateToken(String token) {
+    public void validateTokenWithUserId(String token, int userId) {
         AuthToken authToken = authTokenRepository.findByAuthToken(token)
                 .orElseThrow(() -> new BusinessValidationException("Invalid token"));
+
+        if (authToken.getRecStatus() == DBRecordStatus.INACTIVE) {
+            throw new BusinessValidationException("Token is inactive and cannot be used");
+        }
+
+        if (authToken.getUserIdAuth() != userId) {
+            throw new BusinessValidationException("UserId mismatch");
+        }
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(authToken.getResetTime())) {
@@ -85,16 +93,13 @@ public class AuthService {
         }
     }
 
-    public int getUserIdFromToken(String token) {
-        AuthToken authToken = authTokenRepository.findByAuthToken(token)
-                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
-        return authToken.getUserIdAuth();
-    }
-
     @Scheduled(fixedRate = 120000)
     public void cleanupExpiredTokens() {
         LocalDateTime now = LocalDateTime.now();
-        List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBefore(now);
-        authTokenRepository.deleteAll(expiredTokens);
+        List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBeforeAndRecStatus(now, DBRecordStatus.ACTIVE);
+        for (AuthToken token : expiredTokens) {
+            token.setRecStatus(DBRecordStatus.INACTIVE);
+        }
+        authTokenRepository.saveAll(expiredTokens);
     }
 }

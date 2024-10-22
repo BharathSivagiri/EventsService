@@ -18,21 +18,27 @@ public class AuthTokenInterceptor implements HandlerInterceptor {
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String token = request.getHeader("Authorization");
-        if (token == null || !token.startsWith("Bearer ")) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Missing or invalid Authorization header");
-            return false;
+        String userIdHeader = request.getHeader("userId");
+
+        if (token == null || token.isEmpty()) {
+            throw new BusinessValidationException("No token provided");
         }
 
+        if (userIdHeader == null || userIdHeader.isEmpty()) {
+            throw new BusinessValidationException("No userId provided");
+        }
+
+        int userId;
         try {
-            token = token.substring(7);
-            authService.validateToken(token);
-        } catch (BusinessValidationException e) {
-            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, e.getMessage());
-            return false;
+            userId = Integer.parseInt(userIdHeader);
+        } catch (NumberFormatException e) {
+            throw new BusinessValidationException("Invalid userId format");
         }
 
+        authService.validateTokenWithUserId(token, userId);
 
         return true;
     }
 }
+
 
