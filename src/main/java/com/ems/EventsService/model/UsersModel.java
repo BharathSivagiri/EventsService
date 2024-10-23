@@ -11,6 +11,7 @@ public class UsersModel
 {
     private String userId;
     private String username;
+    private String customName;
     private String password;
     private String email;
     private String mobile;

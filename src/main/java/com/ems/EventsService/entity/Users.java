@@ -23,6 +23,9 @@ public class Users
     @Column(name = "user_name", nullable = false)
     private String username;
 
+    @Column(name = "custom_name", nullable = false)
+    private String customName;
+
     @Column(name = "user_password", nullable = false)
     private String password;
 

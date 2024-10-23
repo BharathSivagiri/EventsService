@@ -35,8 +35,8 @@ public class AuthService {
     @Autowired
     AuthTokenMapper authTokenMapper;
 
-    public String authenticateUser(String username, String password) {
-        Users user = usersRepository.findByUsernameAndRecStatus(username,  DBRecordStatus.ACTIVE)
+    public String authenticateUser(String customName, String password) {
+        Users user = usersRepository.findByCustomNameAndRecStatus(customName,  DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
 
         if (!password.equals(user.getPassword())) {

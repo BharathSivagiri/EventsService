@@ -8,5 +8,5 @@ import java.util.Optional;
 
 public interface UsersRepository extends JpaRepository<Users, Integer>
 {
-    Optional<Users>findByUsernameAndRecStatus(String username, DBRecordStatus recStatus);
+    Optional<Users>findByCustomNameAndRecStatus(String customName, DBRecordStatus recStatus);
 }
