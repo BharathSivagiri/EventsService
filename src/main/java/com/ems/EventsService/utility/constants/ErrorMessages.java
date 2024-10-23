@@ -13,7 +13,7 @@ public class ErrorMessages {
     public static final String INVALID_EVENT_ID = "Invalid event ID";
     public static final String EVENT_RETRIEVAL_ERROR = "Event does not exist. Try again";
     public static final String ACCESS_DENIED = "Access denied";
-    public static final String EVENT_ALREADY_REGISTERED = "You have already registered for this event";
+    public static final String EVENT_ALREADY_REGISTERED = "User is already registered for this event";
     public static final String EVENT_CREATED = "Event created successfully";
     public static final String EVENT_UPDATED = "Event updated successfully";
     public static final String EVENT_DELETED = "Event with ID '%s' has been marked as inactive.";

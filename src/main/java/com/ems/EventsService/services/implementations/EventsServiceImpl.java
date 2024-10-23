@@ -199,7 +199,7 @@ public class EventsServiceImpl implements EventsService
                 .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(userId)));
 
         if (isAlreadyRegistered) {
-            throw new BusinessValidationException("User is already registered for this event");
+            throw new BusinessValidationException(ErrorMessages.EVENT_ALREADY_REGISTERED);
         }
 
         Events event = eventsRepository.findById(Integer.parseInt(eventId))
