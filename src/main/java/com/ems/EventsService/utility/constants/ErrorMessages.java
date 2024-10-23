@@ -12,6 +12,12 @@ public class ErrorMessages {
     public static final String EMAIL_TEMPLATE_NOT_FOUND = "Email template not found";
     public static final String INVALID_EVENT_ID = "Invalid event ID";
     public static final String EVENT_RETRIEVAL_ERROR = "Event does not exist. Try again";
+    public static final String ACCESS_DENIED = "Access denied";
+    public static final String EVENT_ALREADY_REGISTERED = "You have already registered for this event";
+    public static final String EVENT_CREATED = "Event created successfully";
+    public static final String EVENT_UPDATED = "Event updated successfully";
+    public static final String EVENT_DELETED = "Event with ID '%s' has been marked as inactive.";
+    public static final String EVENT_REGISTRATION_SUCCESS = "Successfully registered for event with ID: %s . Registration ID: %s";
 
     public static final String USER_NOT_FOUND = "User not found";
     public static final String INVALID_PASSWORD = "Invalid password";
