@@ -15,7 +15,7 @@ public class EventsModel
 {
     private String eventId;
 
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Name must contain only letters and spaces")
+    @Pattern(regexp = "^[a-zA-Z0-9\\s]+$", message = "Name must contain only letters, numbers and spaces")
     @Size(min=2,max = 30, message = "Name must be 10-30 characters long")
     private String eventName;
 

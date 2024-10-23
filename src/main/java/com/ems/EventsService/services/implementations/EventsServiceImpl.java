@@ -179,6 +179,16 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
+        List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
+                .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
+
+        boolean isAlreadyRegistered = existingRegistrations.stream()
+                .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(userId)));
+
+        if (isAlreadyRegistered) {
+            throw new BusinessValidationException("User is already registered for this event");
+        }
+
         Events event = eventsRepository.findById(Integer.parseInt(eventId))
                 .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
 
