@@ -36,7 +36,7 @@ public class AuthService {
     AuthTokenMapper authTokenMapper;
 
     public String authenticateUser(String username, String password) {
-        Users user = usersRepository.findByUsername(username)
+        Users user = usersRepository.findByUsernameAndRecStatus(username,  DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
 
         if (!password.equals(user.getPassword())) {
@@ -57,7 +57,7 @@ public class AuthService {
     }
 
     public boolean isAdmin(String token) {
-        AuthToken authToken = authTokenRepository.findByAuthToken(token)
+        AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token,DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessValidationException(ErrorMessages.INVALID_TOKEN));
 
         Users user = usersRepository.findById(authToken.getUserIdAuth())
@@ -68,7 +68,7 @@ public class AuthService {
 
     @Transactional
     public void validateToken(String token, int userId) {
-        AuthToken authToken = authTokenRepository.findByAuthToken(token)
+        AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token,DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessValidationException(ErrorMessages.INVALID_TOKEN));
 
         if (authToken.getUserIdAuth() != userId) {

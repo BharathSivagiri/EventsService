@@ -14,26 +14,24 @@ import com.ems.EventsService.mapper.ParticipantEventDTOMapper;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
+import com.ems.EventsService.repositories.UsersRepository;
 import com.ems.EventsService.services.EventsService;
 import com.ems.EventsService.utility.DateUtils;
 import com.ems.EventsService.utility.constants.ErrorMessages;
+import com.ems.EventsService.utility.constants.AppConstants;
 import com.ems.EventsService.repositories.EmailTemplatesRepository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.TemplateEngine;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -44,6 +42,9 @@ public class EventsServiceImpl implements EventsService
 
     @Autowired
     EventsRepository eventsRepository;
+
+    @Autowired
+    UsersRepository  usersRepository;
 
     @Autowired
     EventsRegistrationRepository eventsRegistrationRepository;
@@ -61,13 +62,7 @@ public class EventsServiceImpl implements EventsService
     EmailTemplatesRepository emailTemplatesRepository;
 
     @Autowired
-    JavaMailSender mailSender;
-
-    @Autowired
-    TemplateEngine tempEngine;
-
-    @PersistenceContext
-    EntityManager entityManager;
+    EmailServiceImpl emailService;
 
     @Override
     public EventsModel createEvent(EventsModel eventsModel)
@@ -76,20 +71,20 @@ public class EventsServiceImpl implements EventsService
         if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty()) {
             throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EMPTY);
         }
-        if (eventsRepository.existsByEventName(eventsModel.getEventName())) {
+        if (eventsRepository.existsByEventNameAndRecStatus(eventsModel.getEventName(), DBRecordStatus.ACTIVE)) {
             throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EXISTS);
         }
         if (eventsModel.getEventDate() == null) {
             throw new BusinessValidationException(ErrorMessages.EVENT_DATE_NULL);
         }
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
         LocalDate eventDate = LocalDate.parse(eventsModel.getEventDate(), formatter);
         if (eventDate.isBefore(LocalDate.now())) {
             throw new BusinessValidationException(ErrorMessages.EVENT_DATE_PAST);
         }
         Events events = eventsMapper.toEntity(eventsModel);
-        events.setCreatedBy("Admin");
-        events.setUpdatedBy("Admin");
+        events.setCreatedBy(AppConstants.ADMIN_ROLE);
+        events.setUpdatedBy(AppConstants.ADMIN_ROLE);
         events.setCreatedDate(String.valueOf(LocalDate.now()));
         events.setUpdatedDate(String.valueOf(LocalDate.now()));
         Events savedEvent = eventsRepository.save(events);
@@ -98,37 +93,53 @@ public class EventsServiceImpl implements EventsService
     }
     @Transactional
     @Override
-    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel)
-    {
+    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel) {
         logger.info("Event update for ID {} started", eventId);
 
         Events existingEvent = eventsRepository.findById(eventId)
                 .orElseThrow(() -> new BusinessValidationException(ErrorMessages.EVENT_NOT_FOUND));
 
-        if (eventsModel.getEventName() != null) existingEvent.setEventName(eventsModel.getEventName());
-        if (eventsModel.getEventDescription() != null) existingEvent.setEventDescription(eventsModel.getEventDescription());
-        if (eventsModel.getEventLocation() != null) existingEvent.setEventLocation(eventsModel.getEventLocation());
-        if (eventsModel.getEventCapacity() != null) existingEvent.setEventCapacity(eventsModel.getEventCapacity());
-        if (eventsModel.getEventFee() != null) existingEvent.setEventFee(Double.parseDouble(eventsModel.getEventFee()));
+        Map<String, String> oldValues = Map.of(
+                "name", existingEvent.getEventName(),
+                "location", existingEvent.getEventLocation(),
+                "date", existingEvent.getEventDate()
+        );
+
+        Optional.ofNullable(eventsModel.getEventName()).ifPresent(existingEvent::setEventName);
+        Optional.ofNullable(eventsModel.getEventDescription()).ifPresent(existingEvent::setEventDescription);
+        Optional.ofNullable(eventsModel.getEventLocation()).ifPresent(existingEvent::setEventLocation);
+        Optional.ofNullable(eventsModel.getEventCapacity()).ifPresent(existingEvent::setEventCapacity);
+        Optional.ofNullable(eventsModel.getEventFee()).ifPresent(fee -> existingEvent.setEventFee(Double.parseDouble(fee)));
+        Optional.ofNullable(eventsModel.getEventStatus()).ifPresent(status -> existingEvent.setEventStatus(EventStatus.fromString(status)));
 
         try {
             existingEvent.setEventDate(String.valueOf(DateUtils.convertToDate(eventsModel.getEventDate())));
-        } catch (DateTimeParseException e)
-        {
+        } catch (DateTimeParseException e) {
             throw new DateInvalidException(ErrorMessages.INVALID_DATE_FORMAT);
         }
 
-        if (eventsModel.getEventStatus() != null) {
-            existingEvent.setEventStatus(EventStatus.fromString(eventsModel.getEventStatus()));
-        }
-
-        existingEvent.setCreatedBy("Admin");
-        existingEvent.setUpdatedBy("Admin");
-        existingEvent.setCreatedDate(String.valueOf(LocalDate.now()));
-        existingEvent.setUpdatedDate(String.valueOf(LocalDate.now()));
+        String currentDate = String.valueOf(LocalDate.now());
+        existingEvent.setCreatedBy(AppConstants.ADMIN_ROLE);
+        existingEvent.setUpdatedBy(AppConstants.ADMIN_ROLE);
+        existingEvent.setCreatedDate(currentDate);
+        existingEvent.setUpdatedDate(currentDate);
 
         Events updatedEvent = eventsRepository.save(existingEvent);
         logger.info("Event update for ID {} completed", eventId);
+
+        eventsRegistrationRepository.findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE).stream()
+                .map(reg -> usersRepository.findById(reg.getUserId()))
+                .filter(Optional::isPresent)
+                .map(Optional::get)
+                .forEach(user -> emailService.sendHtmlMessage(
+                        user.getEmail(),
+                        "Event Update: " + updatedEvent.getEventName(),
+                        getUpdatedEventEmailContent(updatedEvent,
+                                oldValues.get("name"),
+                                oldValues.get("location"),
+                                oldValues.get("date"),
+                                user.getUsername())
+                ));
 
         return eventsMapper.toModel(updatedEvent);
     }
@@ -152,9 +163,9 @@ public class EventsServiceImpl implements EventsService
     public List<?> getAllEvents(boolean isAdmin, String keyword)
     {
         logger.info("Fetching all events started");
-        List<Events> events = isAdmin
-                ? eventsRepository.findByEventNameOrEventLocationContainingIgnoreCase(keyword, keyword)
-                : eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
+
+        List<Events> events;
+            events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
         if (isAdmin) {
@@ -182,27 +193,81 @@ public class EventsServiceImpl implements EventsService
         return eventsRegistrationRepository.save(registration);
     }
 
-    public String getUpdatedEventEmailContent(EventsModel updatedEvent, String userName) {
-        EmailTemplates template = emailTemplatesRepository.findByTemplateName("EVENT_UPDATED")
-                .orElseThrow(() -> new RuntimeException("Email template not found"));
+    private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
+                                               String oldLocation, String oldDate, String userName)
+    {
+        EmailTemplates template = emailTemplatesRepository.findByTemplateNameAndRecStatus("EVENT_UPDATED", DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
 
         String emailContent = template.getTemplateCode();
 
-        emailContent = emailContent.replace("{userName}", userName)
+        StringBuilder updatedDetails = new StringBuilder();
+        updatedDetails.append("<ul>");
+
+        if (!oldName.equals(updatedEvent.getEventName())) {
+            updatedDetails.append("<li>Event Name: ").append(oldName)
+                    .append(" → ").append(updatedEvent.getEventName()).append("</li>");
+        }
+
+        if (!oldLocation.equals(updatedEvent.getEventLocation())) {
+            updatedDetails.append("<li>Location: ").append(oldLocation)
+                    .append(" → ").append(updatedEvent.getEventLocation()).append("</li>");
+        }
+
+        if (!oldDate.equals(updatedEvent.getEventDate())) {
+            updatedDetails.append("<li>Date: ").append(oldDate)
+                    .append(" → ").append(updatedEvent.getEventDate()).append("</li>");
+        }
+
+        updatedDetails.append("</ul>");
+
+        return emailContent.replace("{userName}", userName)
                 .replace("{eventName}", updatedEvent.getEventName())
-                .replace("{updatedDetails}", generateUpdatedDetailsString(updatedEvent));
-
-        return emailContent;
+                .replace("{eventLocation}", updatedEvent.getEventLocation())
+                .replace("{eventDate}", updatedEvent.getEventDate())
+                .replace("{updatedDetails}", updatedDetails.toString());
     }
 
-    private String generateUpdatedDetailsString(EventsModel updatedEvent) {
-        StringBuilder details = new StringBuilder();
-        details.append("Date: ").append(updatedEvent.getEventDate()).append("<br>");
-        details.append("Location: ").append(updatedEvent.getEventLocation());
+    @Override
+    public List<Map<String, Object>> getEventParticipants(Integer eventId) {
+        List<Events> events;
+        try {
+            if (eventId != null) {
+                events = Collections.singletonList(eventsRepository.findById(eventId)
+                        .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND)));
+            } else {
+                events = eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE);
+            }
 
-        return details.toString();
+            return events.stream().map(event -> {
+                Map<String, Object> eventData = new HashMap<>();
+                eventData.put("eventId", event.getEventId());
+                eventData.put("eventName", event.getEventName());
+
+                List<Map<String, Object>> participants = eventsRegistrationRepository
+                        .findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE)
+                        .stream()
+                        .map(registration -> {
+                            Map<String, Object> participant = new HashMap<>();
+                            var user = usersRepository.findById(registration.getUserId())
+                                    .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+                            participant.put("userId", user.getUserId());
+                            participant.put("username", user.getUsername());
+                            participant.put("registrationId", registration.getId());
+                            return participant;
+                        })
+                        .collect(Collectors.toList());
+
+                eventData.put("Participants", participants);
+                return eventData;
+            }).collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            throw new BusinessValidationException(ErrorMessages.INVALID_EVENT_ID);
+        } catch (Exception e) {
+            throw new BusinessValidationException(ErrorMessages.EVENT_RETRIEVAL_ERROR);
+        }
     }
-
 }
 
 

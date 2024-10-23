@@ -1,6 +1,7 @@
 package com.ems.EventsService.controller;
 
 import com.ems.EventsService.entity.EventsRegistration;
+import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.services.AuthService;
 import com.ems.EventsService.services.EventsService;
@@ -114,6 +115,20 @@ public class EventsController
                 .body("Successfully registered for event with ID: " + eventId +
                         ". Registration ID: " + registration.getId());
     }
+
+    @GetMapping("/users/view-participants")
+    @Operation(summary = "Get event participants", description = "Returns list of participants for events")
+    public ResponseEntity<List<Map<String, Object>>> getEventParticipants(
+            @RequestHeader("Authorization") String token,
+            @RequestHeader("userId") int userId,
+            @RequestParam(required = false) Integer eventId) {
+        authService.validateToken(token, userId);
+        if (!authService.isAdmin(token)) {
+            throw new BusinessValidationException("Access denied");
+        }
+        return ResponseEntity.ok(eventsService.getEventParticipants(eventId));
+    }
+
 
 }
 

@@ -8,6 +8,10 @@ public class ErrorMessages {
     public static final String EVENT_NOT_FOUND = "Event with ID '%s' not found";
     public static final String INVALID_DATE_FORMAT = "Invalid date format. Please use yyyyMMdd format.";
     public static final String EVENT_FULL_CAPACITY = "Event is already at full capacity";
+    public static final String EMAIL_NOT_SENT = "Failed to send email";
+    public static final String EMAIL_TEMPLATE_NOT_FOUND = "Email template not found";
+    public static final String INVALID_EVENT_ID = "Invalid event ID";
+    public static final String EVENT_RETRIEVAL_ERROR = "Event does not exist. Try again";
 
     public static final String USER_NOT_FOUND = "User not found";
     public static final String INVALID_PASSWORD = "Invalid password";
