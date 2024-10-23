@@ -160,22 +160,35 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Override
-    public List<?> getAllEvents(boolean isAdmin, String keyword)
-    {
+    public List<?> getAllEvents(boolean isAdmin, String keyword) {
         logger.info("Fetching all events started");
 
-        List<Events> events;
-            events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
+        List<Events> events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
         if (isAdmin) {
-            result = events.stream().map(eventsMapper::toModel).collect(Collectors.toList());
+            result = events.stream()
+                    .map(event -> {
+                        Map<String, Object> filteredEvent = new HashMap<>();
+                        filteredEvent.put("eventId", event.getEventId());
+                        filteredEvent.put("eventName", event.getEventName());
+                        filteredEvent.put("eventDescription", event.getEventDescription());
+                        filteredEvent.put("eventDate", event.getEventDate());
+                        filteredEvent.put("eventLocation", event.getEventLocation());
+                        filteredEvent.put("eventCapacity", event.getEventCapacity());
+                        filteredEvent.put("eventFee", event.getEventFee());
+                        filteredEvent.put("eventStatus", event.getEventStatus());
+                        return filteredEvent;
+                    })
+                    .collect(Collectors.toList());
         } else {
             result = events.stream().map(participantEventDTOMapper::toDTO).collect(Collectors.toList());
         }
+
         logger.info("Fetching all events completed");
         return result;
     }
+
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
