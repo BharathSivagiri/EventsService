@@ -10,9 +10,9 @@ CREATE TABLE ems_email_templates (
   PRIMARY KEY (id)
 );
 
-describe ems_email_service;
+describe ems_email_templates;
 
-select * from ems_email_service;
+select * from ems_email_templates;
 
 INSERT INTO ems_email_templates (template_name, template_code, created_by, created_date, record_status, last_updated_date, last_updated_by)
 VALUES
@@ -42,12 +42,10 @@ VALUES
             <p>Event Details:</p>
             <ul>
                 <li>Date: {eventDate}</li>
-                <li>Time: {eventTime}</li>
                 <li>Location: {eventLocation}</li>
             </ul>
             <p>Your registration ID is: <strong>{registrationId}</strong></p>
             <p>We can''t wait to see you at the event!</p>
-            <a href="{eventDetailsLink}" class="button">View Event Details</a>
         </div>
     </div>
 </body>
@@ -78,6 +76,8 @@ VALUES
         <div class="content">
             <h2>Dear {userName},</h2>
             <p>We have important updates regarding the event you''re registered for: <strong>{eventName}</strong></p>
+            <p>Location - <strong>{eventLocation}</strong></p>
+            <p>Date - <strong>{eventDate}</strong></p>
             <div class="update-box">
                 <h3>Updated Event Details:</h3>
                 <p>{updatedDetails}</p>
@@ -116,12 +116,48 @@ VALUES
             <p>We regret to inform you that the following event has been cancelled:</p>
             <div class="cancel-box">
                 <h3>{eventName}</h3>
-                <p>Originally scheduled for: {eventDate} at {eventTime}</p>
-                <p>Reason for cancellation: {cancellationReason}</p>
+                <p>Originally scheduled Date: {eventDate}</p>
+                <p>Originally scheduled Location: {eventLocation}</p>
             </div>
             <p>We sincerely apologize for any inconvenience this may cause. If you have any questions or concerns, please contact our support team.</p>
-            <a href="{refundInfoLink}" class="button">Refund Information</a>
         </div>
+    </div>
+</body>
+</html>',
+'SYSTEM', CURRENT_TIMESTAMP, 'ACTIVE', CURRENT_TIMESTAMP, 'SYSTEM'),
+
+('EVENT_NOTIFICATION',
+'<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Event Remainder Notification</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; background-color: #f9f9f9; }
+        .header { background-color: #df9a06; color: white; padding: 10px; text-align: center; }
+        .content { padding: 20px; background-color: white; }
+        .button { display: inline-block; padding: 10px 20px; background-color: #cc8706; color: white; text-decoration: none; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Event Remainder Notification</h1>
+        </div>
+        <div class="content">
+            <h2>Dear {userName},</h2>
+            <p>This is an email to remind you about the event {eventName} that you have registered!</p>
+            <p>Event Details:</p>
+            <ul>
+                <li>Date: {eventDate}</li>
+                <li>Location: {eventLocation}</li>
+            </ul>
+            <p>Your registration ID is: <strong>{registrationId}</strong></p>
+            <p>Please reach before 10 minutes to the venue to avoid in-convenience..!</p>
+        </div>
+        <p>If you have any questions or concerns, please contact our support team.</p>
     </div>
 </body>
 </html>',
