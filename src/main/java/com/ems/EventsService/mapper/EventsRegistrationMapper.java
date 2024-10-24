@@ -11,7 +11,8 @@ import java.time.LocalDateTime;
 @Component
 public class EventsRegistrationMapper
 {
-    public EventsRegistration toEntity(String transactionId, String eventId, String userId, String createdBy) {
+    public EventsRegistration toEntity(String transactionId, String eventId, String userId, String createdBy)
+    {
         EventsRegistration registration = new EventsRegistration();
         registration.setEventId(Integer.parseInt(eventId));
         registration.setUserId(Integer.parseInt(userId));

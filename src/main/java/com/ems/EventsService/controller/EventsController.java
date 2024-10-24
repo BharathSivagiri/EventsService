@@ -5,9 +5,9 @@ import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.services.AuthService;
 import com.ems.EventsService.services.EventsService;
-
 import com.ems.EventsService.utility.constants.AppConstants;
 import com.ems.EventsService.utility.constants.ErrorMessages;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -41,16 +41,18 @@ public class EventsController
     @Operation(summary = "Create a new event", description = "Creates a new event in the system")
     public ResponseEntity<String> createEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
-                                              @Valid @RequestBody EventsModel eventsModel) {
+                                              @Valid @RequestBody EventsModel eventsModel)
+    {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
+        if (!authService.isAdmin(token))
+        {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorMessages.ACCESS_DENIED);
         }
 
         eventsModel.setCreatedBy(String.valueOf(userId));
         eventsModel.setUpdatedBy(String.valueOf(userId));
 
-        EventsModel createdEvent = eventsService.createEvent(eventsModel);
+        eventsService.createEvent(eventsModel);
         String response = ErrorMessages.EVENT_CREATED;
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
@@ -61,9 +63,11 @@ public class EventsController
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @PathVariable Integer eventId,
-            @RequestBody EventsModel eventsModel) {
+            @RequestBody EventsModel eventsModel)
+    {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
+        if (!authService.isAdmin(token))
+        {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorMessages.ACCESS_DENIED);
         }
         eventsModel.setUpdatedBy(String.valueOf(userId));
@@ -76,9 +80,11 @@ public class EventsController
     public ResponseEntity<String> deleteEvent(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @PathVariable Integer eventId) {
+            @PathVariable Integer eventId)
+    {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
+        if (!authService.isAdmin(token))
+        {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
         }
         eventsService.deleteEvent(eventId);
@@ -90,7 +96,8 @@ public class EventsController
     public ResponseEntity<?> getAllEvents(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword)
+    {
         authService.validateToken(token, userId);
         boolean isAdmin = authService.isAdmin(token);
         List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "");
@@ -99,7 +106,8 @@ public class EventsController
 
     @PostMapping("/registration")
     @Operation(summary = "Register for an event", description = "Allows a user to register for an event")
-    public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData) {
+    public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData)
+    {
         String transactionId = registrationData.get("transactionId");
         String eventId = registrationData.get("eventId");
         String userId = registrationData.get("userId");
@@ -110,11 +118,9 @@ public class EventsController
 
         EventsRegistration registration = eventsService.registerForEvent(transactionId, eventId, userId, createdBy);
 
-        logger.info("Registration completed - registrationId: {}, transactionId: {}",
-                registration.getId(), registration.getTransactionId());
+        logger.info("Registration completed - registrationId: {}, transactionId: {}", registration.getId(), registration.getTransactionId());
 
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(ErrorMessages.EVENT_REGISTRATION_SUCCESS);
+        return ResponseEntity.status(HttpStatus.CREATED).body(ErrorMessages.EVENT_REGISTRATION_SUCCESS);
     }
 
     @PostMapping("/registrations/cancel")
@@ -129,7 +135,7 @@ public class EventsController
         logger.info("Received cancellation request - transactionId: {}, eventId: {}, userId: {}",
                 transactionId, eventId, userId);
 
-        EventsRegistration registration = eventsService.cancelEventRegistration(
+        eventsService.cancelEventRegistration(
                 transactionId, eventId, userId, createdBy, paymentStatus);
 
         return ResponseEntity.ok(ErrorMessages.EVENT_REGISTRATION_CANCELLED);
@@ -140,14 +146,15 @@ public class EventsController
     public ResponseEntity<List<Map<String, Object>>> getEventParticipants(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @RequestParam(required = false) Integer eventId) {
+            @RequestParam(required = false) Integer eventId)
+    {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
+        if (!authService.isAdmin(token))
+        {
             throw new BusinessValidationException(ErrorMessages.ACCESS_DENIED);
         }
         return ResponseEntity.ok(eventsService.getEventParticipants(eventId));
     }
-
 
 }
 

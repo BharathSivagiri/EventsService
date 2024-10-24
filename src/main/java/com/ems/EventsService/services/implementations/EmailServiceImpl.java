@@ -13,13 +13,15 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 
 @Service
-public class EmailServiceImpl implements EmailService {
+public class EmailServiceImpl implements EmailService
+{
 
     @Autowired
     JavaMailSender emailSender;
 
     @Override
-    public void sendHtmlMessage(String to, String subject, String htmlContent) {
+    public void sendHtmlMessage(String to, String subject, String htmlContent)
+    {
         MimeMessage message = emailSender.createMimeMessage();
         try {
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -28,7 +30,8 @@ public class EmailServiceImpl implements EmailService {
             helper.setSubject(subject);
             helper.setText(htmlContent, true);
             emailSender.send(message);
-        } catch (MessagingException e)
+        }
+        catch (MessagingException e)
         {
             throw new BusinessValidationException(ErrorMessages.EMAIL_NOT_SENT);
         }

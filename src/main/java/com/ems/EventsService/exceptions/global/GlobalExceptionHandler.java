@@ -13,7 +13,8 @@ public class GlobalExceptionHandler
 {
 
     @ExceptionHandler(BusinessValidationException.class)
-    public ResponseEntity<String> handleBusinessValidationException(BusinessValidationException ex) {
+    public ResponseEntity<String> handleBusinessValidationException(BusinessValidationException ex)
+    {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.BAD_REQUEST);
     }
 

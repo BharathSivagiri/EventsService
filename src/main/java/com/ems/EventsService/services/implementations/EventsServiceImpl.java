@@ -70,18 +70,22 @@ public class EventsServiceImpl implements EventsService
     public EventsModel createEvent(EventsModel eventsModel)
     {
         logger.info("Event creation for " + eventsModel.getEventName() + " started");
-        if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty()) {
+        if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty())
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EMPTY);
         }
-        if (eventsRepository.existsByEventNameAndRecStatus(eventsModel.getEventName(), DBRecordStatus.ACTIVE)) {
+        if (eventsRepository.existsByEventNameAndRecStatus(eventsModel.getEventName(), DBRecordStatus.ACTIVE))
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EXISTS);
         }
-        if (eventsModel.getEventDate() == null) {
+        if (eventsModel.getEventDate() == null)
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_DATE_NULL);
         }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
         LocalDate eventDate = LocalDate.parse(eventsModel.getEventDate(), formatter);
-        if (eventDate.isBefore(LocalDate.now())) {
+        if (eventDate.isBefore(LocalDate.now()))
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_DATE_PAST);
         }
         Events events = eventsMapper.toEntity(eventsModel);
@@ -96,7 +100,8 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     @Override
-    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel) {
+    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel)
+    {
         logger.info("Event update for ID {} started", eventId);
 
         Events existingEvent = eventsRepository.findById(eventId)
@@ -115,9 +120,12 @@ public class EventsServiceImpl implements EventsService
         Optional.ofNullable(eventsModel.getEventFee()).ifPresent(fee -> existingEvent.setEventFee(Double.parseDouble(fee)));
         Optional.ofNullable(eventsModel.getEventStatus()).ifPresent(status -> existingEvent.setEventStatus(EventStatus.fromString(status)));
 
-        try {
+        try
+        {
             existingEvent.setEventDate(String.valueOf(DateUtils.convertToDate(eventsModel.getEventDate())));
-        } catch (DateTimeParseException e) {
+        }
+        catch (DateTimeParseException e)
+        {
             throw new DateInvalidException(ErrorMessages.INVALID_DATE_FORMAT);
         }
 
@@ -133,7 +141,8 @@ public class EventsServiceImpl implements EventsService
         List<EventsRegistration> registrations = eventsRegistrationRepository.findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE);
 
         if (eventsModel.getEventStatus() != null &&
-                EventStatus.fromString(eventsModel.getEventStatus()) == EventStatus.CANCELLED) {
+                EventStatus.fromString(eventsModel.getEventStatus()) == EventStatus.CANCELLED)
+        {
 
             registrations.stream()
                     .map(reg -> usersRepository.findById(reg.getUserId()))
@@ -156,7 +165,9 @@ public class EventsServiceImpl implements EventsService
                                 emailContent
                         );
                     });
-        } else {
+        }
+        else
+        {
             registrations.stream()
                     .map(reg -> usersRepository.findById(reg.getUserId()))
                     .filter(Optional::isPresent)
@@ -177,7 +188,8 @@ public class EventsServiceImpl implements EventsService
 
     @Override
     @Transactional
-    public void deleteEvent(Integer eventId) {
+    public void deleteEvent(Integer eventId)
+    {
         logger.info("Soft delete for event with ID {} started", eventId);
 
         Events event = eventsRepository.findById(eventId)
@@ -191,15 +203,18 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Override
-    public List<?> getAllEvents(boolean isAdmin, String keyword) {
+    public List<?> getAllEvents(boolean isAdmin, String keyword)
+    {
         logger.info("Fetching all events started");
 
         List<Events> events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
-        if (isAdmin) {
+        if (isAdmin)
+        {
             result = events.stream()
-                    .map(event -> {
+                    .map(event ->
+                    {
                         Map<String, Object> filteredEvent = new HashMap<>();
                         filteredEvent.put("eventId", event.getEventId());
                         filteredEvent.put("eventName", event.getEventName());
@@ -212,7 +227,9 @@ public class EventsServiceImpl implements EventsService
                         return filteredEvent;
                     })
                     .collect(Collectors.toList());
-        } else {
+        }
+        else
+        {
             result = events.stream().map(participantEventDTOMapper::toDTO).collect(Collectors.toList());
         }
 
@@ -221,21 +238,24 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Transactional
-    public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
+    public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy)
+    {
         List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
 
         boolean isAlreadyRegistered = existingRegistrations.stream()
                 .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(userId)));
 
-        if (isAlreadyRegistered) {
+        if (isAlreadyRegistered)
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_ALREADY_REGISTERED);
         }
 
         Events event = eventsRepository.findById(Integer.parseInt(eventId))
                 .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
 
-        if (event.getEventCapacity() <= 0) {
+        if (event.getEventCapacity() <= 0)
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
         }
 
@@ -270,7 +290,8 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     public EventsRegistration cancelEventRegistration(String transactionId, String eventId,
-                                                      String userId, String createdBy, String paymentStatus) {
+                                                      String userId, String createdBy, String paymentStatus)
+    {
 
         List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
@@ -308,17 +329,20 @@ public class EventsServiceImpl implements EventsService
         StringBuilder updatedDetails = new StringBuilder();
         updatedDetails.append("<ul>");
 
-        if (!oldName.equals(updatedEvent.getEventName())) {
+        if (!oldName.equals(updatedEvent.getEventName()))
+        {
             updatedDetails.append("<li>Event Name: ").append(oldName)
                     .append(" → ").append(updatedEvent.getEventName()).append("</li>");
         }
 
-        if (!oldLocation.equals(updatedEvent.getEventLocation())) {
+        if (!oldLocation.equals(updatedEvent.getEventLocation()))
+        {
             updatedDetails.append("<li>Location: ").append(oldLocation)
                     .append(" → ").append(updatedEvent.getEventLocation()).append("</li>");
         }
 
-        if (!oldDate.equals(updatedEvent.getEventDate())) {
+        if (!oldDate.equals(updatedEvent.getEventDate()))
+        {
             updatedDetails.append("<li>Date: ").append(oldDate)
                     .append(" → ").append(updatedEvent.getEventDate()).append("</li>");
         }
@@ -333,17 +357,23 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Override
-    public List<Map<String, Object>> getEventParticipants(Integer eventId) {
+    public List<Map<String, Object>> getEventParticipants(Integer eventId)
+    {
         List<Events> events;
-        try {
-            if (eventId != null) {
+        try
+        {
+            if (eventId != null)
+            {
                 events = Collections.singletonList(eventsRepository.findById(eventId)
                         .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND)));
-            } else {
+            }
+            else
+            {
                 events = eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE);
             }
 
-            return events.stream().map(event -> {
+            return events.stream().map(event ->
+            {
                 Map<String, Object> eventData = new HashMap<>();
                 eventData.put("eventId", event.getEventId());
                 eventData.put("eventName", event.getEventName());
@@ -366,9 +396,13 @@ public class EventsServiceImpl implements EventsService
                 eventData.put("Participants", participants);
                 return eventData;
             }).collect(Collectors.toList());
-        } catch (NumberFormatException e) {
+        }
+        catch (NumberFormatException e)
+        {
             throw new BusinessValidationException(ErrorMessages.INVALID_EVENT_ID);
-        } catch (Exception e) {
+        }
+        catch (Exception e)
+        {
             throw new BusinessValidationException(ErrorMessages.EVENT_RETRIEVAL_ERROR);
         }
     }
