@@ -5,6 +5,7 @@ import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
+import com.ems.EventsService.enums.RegistrationStatus;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
@@ -29,6 +30,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.*;
@@ -189,7 +191,6 @@ public class EventsServiceImpl implements EventsService
         return result;
     }
 
-
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
         List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
@@ -214,6 +215,35 @@ public class EventsServiceImpl implements EventsService
 
         EventsRegistration registration = eventsRegistrationMapper.toEntity(transactionId, eventId, userId, createdBy);
         return eventsRegistrationRepository.save(registration);
+    }
+
+    @Transactional
+    public EventsRegistration cancelEventRegistration(String transactionId, String eventId,
+                                                      String userId, String createdBy, String paymentStatus) {
+
+        List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
+                .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
+
+        EventsRegistration existingRegistration = existingRegistrations.stream()
+                .filter(reg -> reg.getUserId().equals(Integer.parseInt(userId)))
+                .findFirst()
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.REGISTRATION_NOT_FOUND));
+
+        existingRegistration.setRecordStatus(DBRecordStatus.INACTIVE);
+        existingRegistration.setLastUpdatedDate(LocalDateTime.now().toString());
+        existingRegistration.setLastUpdatedBy(createdBy);
+        eventsRegistrationRepository.save(existingRegistration);
+
+        EventsRegistration cancelledRegistration = eventsRegistrationMapper.toEntity(
+                transactionId, eventId, userId, createdBy);
+        cancelledRegistration.setRegistrationStatus(RegistrationStatus.CANCELLED);
+
+        Events event = eventsRepository.findById(Integer.parseInt(eventId))
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
+        event.setEventCapacity(event.getEventCapacity() + 1);
+        eventsRepository.save(event);
+
+        return eventsRegistrationRepository.save(cancelledRegistration);
     }
 
     private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,

@@ -26,5 +26,7 @@ public class ErrorMessages {
     public static final String TOKEN_EXPIRED = "Token is expired";
     public static final String TOKEN_INACTIVE = "Token is inactive";
 
+    public static final String EVENT_REGISTRATION_CANCELLED = "Registration cancelled successfully";
+    public static final String REGISTRATION_NOT_FOUND = "Registration not found";
 }
 

@@ -20,6 +20,7 @@ public interface EventsService
 
     List<Map<String, Object>> getEventParticipants(Integer eventId);
 
+    EventsRegistration cancelEventRegistration(String transactionId, String eventId, String userId, String createdBy, String paymentStatus);
 
 
 }
