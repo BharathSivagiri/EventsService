@@ -243,7 +243,29 @@ public class EventsServiceImpl implements EventsService
         eventsRepository.save(event);
 
         EventsRegistration registration = eventsRegistrationMapper.toEntity(transactionId, eventId, userId, createdBy);
-        return eventsRegistrationRepository.save(registration);
+        EventsRegistration savedRegistration = eventsRegistrationRepository.save(registration);
+
+        var user = usersRepository.findById(Integer.parseInt(userId))
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+        EmailTemplates template = emailTemplatesRepository
+                .findByTemplateNameAndRecStatus("REGISTRATION_SUCCESS", DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+        String emailContent = template.getTemplateCode()
+                .replace("{userName}", user.getUsername())
+                .replace("{eventName}", event.getEventName())
+                .replace("{eventLocation}", event.getEventLocation())
+                .replace("{eventDate}", event.getEventDate())
+                .replace("{registrationId}", savedRegistration.getId().toString());
+
+        emailService.sendHtmlMessage(
+                user.getEmail(),
+                "Event Registration Confirmation: " + event.getEventName(),
+                emailContent
+        );
+
+        return savedRegistration;
     }
 
     @Transactional
