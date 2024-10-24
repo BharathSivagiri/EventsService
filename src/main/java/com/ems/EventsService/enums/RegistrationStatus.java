@@ -1,5 +1,8 @@
 package com.ems.EventsService.enums;
 
+import com.ems.EventsService.utility.constants.AppConstants;
+import com.ems.EventsService.utility.constants.ErrorMessages;
+
 public enum RegistrationStatus
 {
     REGISTERED("registered"),
@@ -26,7 +29,7 @@ public enum RegistrationStatus
                 return rs;
             }
         }
-        throw new IllegalArgumentException("Invalid registration status: " + status);
+        throw new IllegalArgumentException(ErrorMessages.INVALID_REG_STATUS);
     }
 }
 

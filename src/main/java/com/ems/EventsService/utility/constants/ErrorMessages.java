@@ -28,5 +28,10 @@ public class ErrorMessages {
 
     public static final String EVENT_REGISTRATION_CANCELLED = "Registration cancelled successfully";
     public static final String REGISTRATION_NOT_FOUND = "Registration not found";
+
+    public static final String RECORD_NOT_FOUND = "Record not found";
+    public static final String INVALID_REG_STATUS = "Invalid registration status";
+    public static final String INVALID_USER_STATUS = "Invalid user status";
+    public static final String INVALID_EVENT_STATUS = "Invalid event status";
 }
 

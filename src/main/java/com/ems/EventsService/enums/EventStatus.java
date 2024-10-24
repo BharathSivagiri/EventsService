@@ -1,5 +1,6 @@
 package com.ems.EventsService.enums;
 
+import com.ems.EventsService.utility.constants.ErrorMessages;
 import lombok.Getter;
 
 @Getter
@@ -25,6 +26,6 @@ public enum EventStatus
                 return estatus;
             }
         }
-        throw new IllegalArgumentException("Invalid event status: " + eventStatus);
+        throw new IllegalArgumentException(ErrorMessages.INVALID_EVENT_STATUS);
     }
 }

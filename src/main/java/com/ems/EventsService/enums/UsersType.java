@@ -1,5 +1,6 @@
 package com.ems.EventsService.enums;
 
+import com.ems.EventsService.utility.constants.ErrorMessages;
 import lombok.Getter;
 
 @Getter
@@ -24,6 +25,6 @@ public enum UsersType
                 return type;
             }
         }
-        throw new IllegalArgumentException("Invalid user status: " + userTypeStr);
+        throw new IllegalArgumentException(ErrorMessages.INVALID_USER_STATUS);
     }
 }

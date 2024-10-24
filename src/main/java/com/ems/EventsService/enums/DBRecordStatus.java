@@ -1,5 +1,7 @@
 package com.ems.EventsService.enums;
 
+import com.ems.EventsService.utility.constants.ErrorMessages;
+
 public enum DBRecordStatus
 {
     ACTIVE("active"),
@@ -26,6 +28,6 @@ public enum DBRecordStatus
                 return status;
             }
         }
-        throw new IllegalArgumentException("No constant with text " + dbStatus + " found");
+        throw new IllegalArgumentException(ErrorMessages.RECORD_NOT_FOUND);
     }
 }
