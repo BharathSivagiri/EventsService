@@ -93,6 +93,7 @@ public class EventsServiceImpl implements EventsService
         logger.info("Event creation for " + eventsModel.getEventName() + " completed");
         return eventsMapper.toModel(savedEvent);
     }
+
     @Transactional
     @Override
     public EventsModel updateEvent(Integer eventId, EventsModel eventsModel) {
@@ -129,19 +130,47 @@ public class EventsServiceImpl implements EventsService
         Events updatedEvent = eventsRepository.save(existingEvent);
         logger.info("Event update for ID {} completed", eventId);
 
-        eventsRegistrationRepository.findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE).stream()
-                .map(reg -> usersRepository.findById(reg.getUserId()))
-                .filter(Optional::isPresent)
-                .map(Optional::get)
-                .forEach(user -> emailService.sendHtmlMessage(
-                        user.getEmail(),
-                        "Event Update: " + updatedEvent.getEventName(),
-                        getUpdatedEventEmailContent(updatedEvent,
-                                oldValues.get("name"),
-                                oldValues.get("location"),
-                                oldValues.get("date"),
-                                user.getUsername())
-                ));
+        List<EventsRegistration> registrations = eventsRegistrationRepository.findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE);
+
+        if (eventsModel.getEventStatus() != null &&
+                EventStatus.fromString(eventsModel.getEventStatus()) == EventStatus.CANCELLED) {
+
+            registrations.stream()
+                    .map(reg -> usersRepository.findById(reg.getUserId()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .forEach(user -> {
+                        EmailTemplates template = emailTemplatesRepository
+                                .findByTemplateNameAndRecStatus("EVENT_CANCELLED", DBRecordStatus.ACTIVE)
+                                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+                        String emailContent = template.getTemplateCode()
+                                .replace("{userName}", user.getUsername())
+                                .replace("{eventName}", updatedEvent.getEventName())
+                                .replace("{eventLocation}", updatedEvent.getEventLocation())
+                                .replace("{eventDate}", updatedEvent.getEventDate());
+
+                        emailService.sendHtmlMessage(
+                                user.getEmail(),
+                                "Event Cancelled: " + updatedEvent.getEventName(),
+                                emailContent
+                        );
+                    });
+        } else {
+            registrations.stream()
+                    .map(reg -> usersRepository.findById(reg.getUserId()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .forEach(user -> emailService.sendHtmlMessage(
+                            user.getEmail(),
+                            "Event Update: " + updatedEvent.getEventName(),
+                            getUpdatedEventEmailContent(updatedEvent,
+                                    oldValues.get("name"),
+                                    oldValues.get("location"),
+                                    oldValues.get("date"),
+                                    user.getUsername())
+                    ));
+        }
 
         return eventsMapper.toModel(updatedEvent);
     }
