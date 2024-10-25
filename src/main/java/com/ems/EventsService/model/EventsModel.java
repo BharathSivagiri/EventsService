@@ -11,12 +11,11 @@ import lombok.Setter;
 @Data
 @Getter
 @Setter
-public class EventsModel
-{
+public class EventsModel {
     private String eventId;
 
     @Pattern(regexp = "^[a-zA-Z0-9\\s]+$", message = "Name must contain only letters, numbers and spaces")
-    @Size(min=2,max = 30, message = "Name must be 10-30 characters long")
+    @Size(min = 2, max = 30, message = "Name must be 10-30 characters long")
     private String eventName;
 
     private String eventDescription;
@@ -25,7 +24,7 @@ public class EventsModel
     private String eventDate;
 
     @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Location must contain only letters and spaces")
-    @Size(min=2,max = 30, message = "Location must be 10-30 characters long")
+    @Size(min = 2, max = 30, message = "Location must be 10-30 characters long")
     private String eventLocation;
 
     @Min(value = 0, message = "Capacity must be a non-negative number")

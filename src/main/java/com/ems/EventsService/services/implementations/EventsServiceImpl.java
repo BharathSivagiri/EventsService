@@ -27,6 +27,8 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -38,15 +40,14 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class EventsServiceImpl implements EventsService
-{
+public class EventsServiceImpl implements EventsService {
     private static final Logger logger = LoggerFactory.getLogger(EventsServiceImpl.class);
 
     @Autowired
     EventsRepository eventsRepository;
 
     @Autowired
-    UsersRepository  usersRepository;
+    UsersRepository usersRepository;
 
     @Autowired
     EventsRegistrationRepository eventsRegistrationRepository;
@@ -67,25 +68,20 @@ public class EventsServiceImpl implements EventsService
     EmailServiceImpl emailService;
 
     @Override
-    public EventsModel createEvent(EventsModel eventsModel)
-    {
+    public EventsModel createEvent(EventsModel eventsModel) {
         logger.info("Event creation for " + eventsModel.getEventName() + " started");
-        if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty())
-        {
+        if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty()) {
             throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EMPTY);
         }
-        if (eventsRepository.existsByEventNameAndRecStatus(eventsModel.getEventName(), DBRecordStatus.ACTIVE))
-        {
+        if (eventsRepository.existsByEventNameAndRecStatus(eventsModel.getEventName(), DBRecordStatus.ACTIVE)) {
             throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EXISTS);
         }
-        if (eventsModel.getEventDate() == null)
-        {
+        if (eventsModel.getEventDate() == null) {
             throw new BusinessValidationException(ErrorMessages.EVENT_DATE_NULL);
         }
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
         LocalDate eventDate = LocalDate.parse(eventsModel.getEventDate(), formatter);
-        if (eventDate.isBefore(LocalDate.now()))
-        {
+        if (eventDate.isBefore(LocalDate.now())) {
             throw new BusinessValidationException(ErrorMessages.EVENT_DATE_PAST);
         }
         Events events = eventsMapper.toEntity(eventsModel);
@@ -100,8 +96,7 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     @Override
-    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel)
-    {
+    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel) {
         logger.info("Event update for ID {} started", eventId);
 
         Events existingEvent = eventsRepository.findById(eventId)
@@ -120,12 +115,9 @@ public class EventsServiceImpl implements EventsService
         Optional.ofNullable(eventsModel.getEventFee()).ifPresent(fee -> existingEvent.setEventFee(Double.parseDouble(fee)));
         Optional.ofNullable(eventsModel.getEventStatus()).ifPresent(status -> existingEvent.setEventStatus(EventStatus.fromString(status)));
 
-        try
-        {
+        try {
             existingEvent.setEventDate(String.valueOf(DateUtils.convertToDate(eventsModel.getEventDate())));
-        }
-        catch (DateTimeParseException e)
-        {
+        } catch (DateTimeParseException e) {
             throw new DateInvalidException(ErrorMessages.INVALID_DATE_FORMAT);
         }
 
@@ -141,8 +133,7 @@ public class EventsServiceImpl implements EventsService
         List<EventsRegistration> registrations = eventsRegistrationRepository.findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE);
 
         if (eventsModel.getEventStatus() != null &&
-                EventStatus.fromString(eventsModel.getEventStatus()) == EventStatus.CANCELLED)
-        {
+                EventStatus.fromString(eventsModel.getEventStatus()) == EventStatus.CANCELLED) {
 
             registrations.stream()
                     .map(reg -> usersRepository.findById(reg.getUserId()))
@@ -165,9 +156,7 @@ public class EventsServiceImpl implements EventsService
                                 emailContent
                         );
                     });
-        }
-        else
-        {
+        } else {
             registrations.stream()
                     .map(reg -> usersRepository.findById(reg.getUserId()))
                     .filter(Optional::isPresent)
@@ -188,8 +177,7 @@ public class EventsServiceImpl implements EventsService
 
     @Override
     @Transactional
-    public void deleteEvent(Integer eventId)
-    {
+    public void deleteEvent(Integer eventId) {
         logger.info("Soft delete for event with ID {} started", eventId);
 
         Events event = eventsRepository.findById(eventId)
@@ -203,15 +191,13 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Override
-    public List<?> getAllEvents(boolean isAdmin, String keyword)
-    {
+    public List<?> getAllEvents(boolean isAdmin, String keyword) {
         logger.info("Fetching all events started");
 
         List<Events> events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
-        if (isAdmin)
-        {
+        if (isAdmin) {
             result = events.stream()
                     .map(event ->
                     {
@@ -227,9 +213,7 @@ public class EventsServiceImpl implements EventsService
                         return filteredEvent;
                     })
                     .collect(Collectors.toList());
-        }
-        else
-        {
+        } else {
             result = events.stream().map(participantEventDTOMapper::toDTO).collect(Collectors.toList());
         }
 
@@ -238,24 +222,21 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Transactional
-    public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy)
-    {
+    public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
         List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
 
         boolean isAlreadyRegistered = existingRegistrations.stream()
                 .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(userId)));
 
-        if (isAlreadyRegistered)
-        {
+        if (isAlreadyRegistered) {
             throw new BusinessValidationException(ErrorMessages.EVENT_ALREADY_REGISTERED);
         }
 
         Events event = eventsRepository.findById(Integer.parseInt(eventId))
                 .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
 
-        if (event.getEventCapacity() <= 0)
-        {
+        if (event.getEventCapacity() <= 0) {
             throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
         }
 
@@ -290,8 +271,7 @@ public class EventsServiceImpl implements EventsService
 
     @Transactional
     public EventsRegistration cancelEventRegistration(String transactionId, String eventId,
-                                                      String userId, String createdBy, String paymentStatus)
-    {
+                                                      String userId, String createdBy, String paymentStatus) {
 
         List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
@@ -319,8 +299,7 @@ public class EventsServiceImpl implements EventsService
     }
 
     private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
-                                               String oldLocation, String oldDate, String userName)
-    {
+                                               String oldLocation, String oldDate, String userName) {
         EmailTemplates template = emailTemplatesRepository.findByTemplateNameAndRecStatus("EVENT_UPDATED", DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
 
@@ -329,20 +308,17 @@ public class EventsServiceImpl implements EventsService
         StringBuilder updatedDetails = new StringBuilder();
         updatedDetails.append("<ul>");
 
-        if (!oldName.equals(updatedEvent.getEventName()))
-        {
+        if (!oldName.equals(updatedEvent.getEventName())) {
             updatedDetails.append("<li>Event Name: ").append(oldName)
                     .append(" → ").append(updatedEvent.getEventName()).append("</li>");
         }
 
-        if (!oldLocation.equals(updatedEvent.getEventLocation()))
-        {
+        if (!oldLocation.equals(updatedEvent.getEventLocation())) {
             updatedDetails.append("<li>Location: ").append(oldLocation)
                     .append(" → ").append(updatedEvent.getEventLocation()).append("</li>");
         }
 
-        if (!oldDate.equals(updatedEvent.getEventDate()))
-        {
+        if (!oldDate.equals(updatedEvent.getEventDate())) {
             updatedDetails.append("<li>Date: ").append(oldDate)
                     .append(" → ").append(updatedEvent.getEventDate()).append("</li>");
         }
@@ -357,18 +333,13 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Override
-    public List<Map<String, Object>> getEventParticipants(Integer eventId)
-    {
+    public List<Map<String, Object>> getEventParticipants(Integer eventId) {
         List<Events> events;
-        try
-        {
-            if (eventId != null)
-            {
+        try {
+            if (eventId != null) {
                 events = Collections.singletonList(eventsRepository.findById(eventId)
                         .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND)));
-            }
-            else
-            {
+            } else {
                 events = eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE);
             }
 
@@ -396,15 +367,56 @@ public class EventsServiceImpl implements EventsService
                 eventData.put("Participants", participants);
                 return eventData;
             }).collect(Collectors.toList());
-        }
-        catch (NumberFormatException e)
-        {
+        } catch (NumberFormatException e) {
             throw new BusinessValidationException(ErrorMessages.INVALID_EVENT_ID);
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             throw new BusinessValidationException(ErrorMessages.EVENT_RETRIEVAL_ERROR);
         }
+    }
+
+    @ConditionalOnProperty(value = "scheduler.enabled", havingValue = "true", matchIfMissing = false)
+    @Scheduled(cron = "${scheduler.cron}")
+    public void sendEventReminders() {
+        logger.info("Starting event reminder job");
+
+        LocalDate twoDaysFromNow = LocalDate.now().plusDays(2);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
+        String targetDate = twoDaysFromNow.format(formatter);
+
+        List<Events> upcomingEvents = eventsRepository.findByEventDateAndRecStatus(
+                targetDate,
+                DBRecordStatus.ACTIVE
+        );
+
+        for (Events event : upcomingEvents) {
+            List<EventsRegistration> registrations = eventsRegistrationRepository
+                    .findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE);
+
+            for (EventsRegistration registration : registrations) {
+                var user = usersRepository.findById(registration.getUserId())
+                        .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+                EmailTemplates template = emailTemplatesRepository
+                        .findByTemplateNameAndRecStatus("EVENT_NOTIFICATION", DBRecordStatus.ACTIVE)
+                        .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+                String emailContent = template.getTemplateCode()
+                        .replace("{userName}", user.getUsername())
+                        .replace("{eventName}", event.getEventName())
+                        .replace("{eventLocation}", event.getEventLocation())
+                        .replace("{eventDate}", event.getEventDate())
+                        .replace("{registrationId}", registration.getId().toString());
+
+                emailService.sendHtmlMessage(
+                        user.getEmail(),
+                        "Upcoming Event Reminder: " + event.getEventName(),
+                        emailContent
+                );
+
+                logger.info("Sent reminder for event {} to user {}", event.getEventId(), user.getUserId());
+            }
+        }
+        logger.info("Completed event reminder job");
     }
 }
 

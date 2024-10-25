@@ -1,6 +1,5 @@
 package com.ems.EventsService.enums;
 
-import com.ems.EventsService.utility.constants.AppConstants;
 import com.ems.EventsService.utility.constants.ErrorMessages;
 
 public enum RegistrationStatus

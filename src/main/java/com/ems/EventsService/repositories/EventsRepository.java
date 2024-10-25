@@ -16,4 +16,7 @@ public interface EventsRepository extends JpaRepository<Events, Integer>
     List<Events> findByRecStatus(DBRecordStatus recStatus);
 
     boolean existsByEventNameAndRecStatus(String eventName, DBRecordStatus recStatus);
+
+    List<Events> findByEventDateAndRecStatus(String eventDate, DBRecordStatus recordStatus);
+
 }

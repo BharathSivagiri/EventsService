@@ -6,8 +6,7 @@ import com.ems.EventsService.model.EventsModel;
 import java.util.List;
 import java.util.Map;
 
-public interface EventsService
-{
+public interface EventsService {
     EventsModel createEvent(EventsModel eventsModel);
 
     EventsModel updateEvent(Integer eventId, EventsModel eventsModel);

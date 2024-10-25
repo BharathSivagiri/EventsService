@@ -26,8 +26,7 @@ import java.util.Map;
 @RequestMapping("/ems/events")
 @RequiredArgsConstructor
 @Tag(name = "Events", description = "Events Management API")
-public class EventsController
-{
+public class EventsController {
     @Autowired
     EventsService eventsService;
 
@@ -41,11 +40,9 @@ public class EventsController
     @Operation(summary = "Create a new event", description = "Creates a new event in the system")
     public ResponseEntity<String> createEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
-                                              @Valid @RequestBody EventsModel eventsModel)
-    {
+                                              @Valid @RequestBody EventsModel eventsModel) {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token))
-        {
+        if (!authService.isAdmin(token)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorMessages.ACCESS_DENIED);
         }
 
@@ -59,15 +56,12 @@ public class EventsController
 
     @PutMapping("/update/{eventId}")
     @Operation(summary = "Updating an event", description = "Updates an existing event in the system")
-    public ResponseEntity<String> updateEvent(
-            @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
-            @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @PathVariable Integer eventId,
-            @RequestBody EventsModel eventsModel)
-    {
+    public ResponseEntity<String> updateEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
+                                              @RequestHeader(AppConstants.USERID_HEADER) int userId,
+                                              @PathVariable Integer eventId,
+                                              @RequestBody EventsModel eventsModel) {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token))
-        {
+        if (!authService.isAdmin(token)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorMessages.ACCESS_DENIED);
         }
         eventsModel.setUpdatedBy(String.valueOf(userId));
@@ -80,11 +74,9 @@ public class EventsController
     public ResponseEntity<String> deleteEvent(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @PathVariable Integer eventId)
-    {
+            @PathVariable Integer eventId) {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token))
-        {
+        if (!authService.isAdmin(token)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
         }
         eventsService.deleteEvent(eventId);
@@ -96,8 +88,7 @@ public class EventsController
     public ResponseEntity<?> getAllEvents(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @RequestParam(required = false) String keyword)
-    {
+            @RequestParam(required = false) String keyword) {
         authService.validateToken(token, userId);
         boolean isAdmin = authService.isAdmin(token);
         List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "");
@@ -106,8 +97,7 @@ public class EventsController
 
     @PostMapping("/registration")
     @Operation(summary = "Register for an event", description = "Allows a user to register for an event")
-    public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData)
-    {
+    public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData) {
         String transactionId = registrationData.get("transactionId");
         String eventId = registrationData.get("eventId");
         String userId = registrationData.get("userId");
@@ -146,11 +136,9 @@ public class EventsController
     public ResponseEntity<List<Map<String, Object>>> getEventParticipants(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @RequestParam(required = false) Integer eventId)
-    {
+            @RequestParam(required = false) Integer eventId) {
         authService.validateToken(token, userId);
-        if (!authService.isAdmin(token))
-        {
+        if (!authService.isAdmin(token)) {
             throw new BusinessValidationException(ErrorMessages.ACCESS_DENIED);
         }
         return ResponseEntity.ok(eventsService.getEventParticipants(eventId));
