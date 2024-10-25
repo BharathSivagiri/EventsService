@@ -120,6 +120,7 @@ public class EventsServiceImpl implements EventsService {
         Optional.ofNullable(eventsModel.getEventCapacity()).ifPresent(existingEvent::setEventCapacity);
         Optional.ofNullable(eventsModel.getEventFee()).ifPresent(fee -> existingEvent.setEventFee(Double.parseDouble(fee)));
         Optional.ofNullable(eventsModel.getEventStatus()).ifPresent(status -> existingEvent.setEventStatus(EventStatus.fromString(status)));
+        Optional.ofNullable(eventsModel.getRecStatus()).ifPresent(status -> existingEvent.setRecStatus(DBRecordStatus.fromString(status)));
 
         try {
             existingEvent.setEventDate(String.valueOf(DateUtils.convertToDate(eventsModel.getEventDate())));

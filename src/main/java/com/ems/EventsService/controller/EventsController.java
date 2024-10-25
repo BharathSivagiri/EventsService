@@ -102,7 +102,12 @@ public class EventsController {
     }
 
     @PostMapping("/registration")
-    public ResponseEntity<?> processRegistration(@RequestBody PaymentRequestDTO request)  throws BusinessValidationException {
+    @Operation(summary = "Register for an event", description = "Registers a user for an event")
+    public ResponseEntity<?> processRegistration(
+            @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
+            @RequestHeader(AppConstants.USERID_HEADER) int userId,
+            @RequestBody PaymentRequestDTO request)  throws BusinessValidationException {
+        authService.validateToken(token, userId);
             EventsRegistration registration = eventsService.processEventRegistration(request);
             return ResponseEntity.status(HttpStatus.CREATED)
                     .body(new RegistrationResponseDTO(
@@ -113,7 +118,12 @@ public class EventsController {
     }
 
     @PostMapping("/registration/cancel")
-    public ResponseEntity<?> cancelRegistration(@RequestBody PaymentRequestDTO request) {
+    @Operation(summary = "Cancel registration for an event", description = "Cancels a user's registration for an event")
+    public ResponseEntity<?> cancelRegistration(
+            @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
+            @RequestHeader(AppConstants.USERID_HEADER) int userId,
+            @RequestBody PaymentRequestDTO request) {
+        authService.validateToken(token, userId);
         EventsRegistration cancelledRegistration = eventsService.cancelEventRegistration(request);
         return ResponseEntity.ok("Registration cancelled successfully and payment refunded");
     }
