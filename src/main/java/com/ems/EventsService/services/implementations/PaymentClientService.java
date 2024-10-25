@@ -41,5 +41,22 @@ public class PaymentClientService {
         log.info("Payment processed successfully with ID: {}", transactionId);
         return transactionId;
     }
+
+    public Integer processRefund(PaymentRequestDTO request) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        HttpEntity<PaymentRequestDTO> requestEntity = new HttpEntity<>(request, headers);
+
+        Integer transactionId = restTemplate.postForObject(
+                paymentsServiceUrl + "/payment/refund",
+                requestEntity,
+                Integer.class
+        );
+
+        log.info("Refund processed successfully with ID: {}", transactionId);
+        return transactionId;
+    }
+
+
 }
 

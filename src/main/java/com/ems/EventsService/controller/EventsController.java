@@ -112,23 +112,12 @@ public class EventsController {
                     ));
     }
 
-    @PostMapping("/registrations/cancel")
-    @Operation(summary = "Cancel event registration", description = "Cancels an existing event registration and processes refund")
-    public ResponseEntity<String> cancelEventRegistration(@RequestBody Map<String, String> registrationData) {
-        String transactionId = registrationData.get("transactionId");
-        String eventId = registrationData.get("eventId");
-        String userId = registrationData.get("userId");
-        String createdBy = registrationData.get("createdBy");
-        String paymentStatus = registrationData.get("paymentStatus");
-
-        logger.info("Received cancellation request - transactionId: {}, eventId: {}, userId: {}",
-                transactionId, eventId, userId);
-
-        eventsService.cancelEventRegistration(
-                transactionId, eventId, userId, createdBy, paymentStatus);
-
-        return ResponseEntity.ok(ErrorMessages.EVENT_REGISTRATION_CANCELLED);
+    @PostMapping("/registration/cancel")
+    public ResponseEntity<?> cancelRegistration(@RequestBody PaymentRequestDTO request) {
+        EventsRegistration cancelledRegistration = eventsService.cancelEventRegistration(request);
+        return ResponseEntity.ok("Registration cancelled successfully and payment refunded");
     }
+
 
     @GetMapping("/users/view-participants")
     @Operation(summary = "Get event participants", description = "Returns list of participants for events")

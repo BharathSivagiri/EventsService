@@ -276,33 +276,49 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Transactional
-    public EventsRegistration cancelEventRegistration(String transactionId, String eventId,
-                                                      String userId, String createdBy, String paymentStatus) {
+    public EventsRegistration cancelEventRegistration(PaymentRequestDTO request) {
+        EventsRegistration registration = eventsRegistrationRepository
+                .findByEventIdAndUserIdAndRecordStatus(
+                        Integer.parseInt(request.getEventId()),
+                        Integer.parseInt(request.getUserId()),
+                        DBRecordStatus.ACTIVE
+                ).orElseThrow(() -> new DataNotFoundException(ErrorMessages.REGISTRATION_NOT_FOUND));
 
-        List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
-                .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
-
-        EventsRegistration existingRegistration = existingRegistrations.stream()
-                .filter(reg -> reg.getUserId().equals(Integer.parseInt(userId)))
-                .findFirst()
-                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.REGISTRATION_NOT_FOUND));
-
-        existingRegistration.setRecordStatus(DBRecordStatus.INACTIVE);
-        existingRegistration.setLastUpdatedDate(LocalDateTime.now().toString());
-        existingRegistration.setLastUpdatedBy(createdBy);
-        eventsRegistrationRepository.save(existingRegistration);
-
-        EventsRegistration cancelledRegistration = eventsRegistrationMapper.toEntity(
-                transactionId, eventId, userId, createdBy);
-        cancelledRegistration.setRegistrationStatus(RegistrationStatus.CANCELLED);
-
-        Events event = eventsRepository.findById(Integer.parseInt(eventId))
+        Events event = eventsRepository.findById(Integer.parseInt(request.getEventId()))
                 .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
+
         event.setEventCapacity(event.getEventCapacity() + 1);
         eventsRepository.save(event);
 
-        return eventsRegistrationRepository.save(cancelledRegistration);
+        request.setTransactionType("CREDIT");
+        request.setAmountPaid(String.valueOf(event.getEventFee()));
+        Integer refundTransactionId = paymentClientService.processRefund(request);
+
+        registration.setRegistrationStatus(RegistrationStatus.CANCELLED);
+        registration.setRecordStatus(DBRecordStatus.INACTIVE);
+        registration.setLastUpdatedDate(LocalDateTime.now().toString());
+        registration.setLastUpdatedBy(request.getCreatedBy());
+
+        EventsRegistration cancelledRegistration = eventsRegistrationRepository.save(registration);
+
+        return cancelledRegistration;
     }
+
+    private void validateCancellationRequest(Events event, EventsRegistration registration) {
+        // Check if event date has passed
+        LocalDate eventDate = LocalDate.parse(event.getEventDate(),
+                DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT));
+
+        if (eventDate.isBefore(LocalDate.now())) {
+            throw new BusinessValidationException(ErrorMessages.PAST_EVENT_CANCELLATION);
+        }
+
+        // Check if already cancelled
+        if (registration.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
+            throw new BusinessValidationException(ErrorMessages.ALREADY_CANCELLED);
+        }
+    }
+
 
     private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
                                                String oldLocation, String oldDate, String userName) {

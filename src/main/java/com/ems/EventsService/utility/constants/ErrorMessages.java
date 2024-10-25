@@ -17,7 +17,6 @@ public class ErrorMessages {
     public static final String EVENT_CREATED = "Event created successfully";
     public static final String EVENT_UPDATED = "Event updated successfully";
     public static final String EVENT_DELETED = "Event with ID '%s' has been marked as inactive.";
-    public static final String EVENT_REGISTRATION_SUCCESS = "Successfully registered for event.";
 
     public static final String USER_NOT_FOUND = "User not found";
     public static final String INVALID_PASSWORD = "Invalid password";
@@ -25,15 +24,15 @@ public class ErrorMessages {
     public static final String USER_MISMATCH = "User mismatch";
     public static final String TOKEN_EXPIRED = "Token is expired";
     public static final String TOKEN_INACTIVE = "Token is inactive";
-    public static final String EVENT_REGISTRATION_CANCELLED = "Registration cancelled successfully";
     public static final String REGISTRATION_NOT_FOUND = "Registration not found";
     public static final String RECORD_NOT_FOUND = "Record not found";
     public static final String INVALID_REG_STATUS = "Invalid registration status";
     public static final String INVALID_USER_STATUS = "Invalid user status";
     public static final String INVALID_EVENT_STATUS = "Invalid event status";
-    public static final String PAYMENT_FAILED = "Payment failed. Try Again";
-    public static final String PAYMENT_PROCESSING_ERROR = "Failed to obtain valid transaction ID from payment service";
     public static final String USER_ALREADY_REGISTERED = "User is already registered for this event";
-    public static final String REGISTRATION_FAILED = "Registration failed. Please try again";
+    public static final String PAST_EVENT_CANCELLATION = "Cannot cancel registration for past events";
+    public static final String ALREADY_CANCELLED = "Registration is already cancelled";
+    public static final String REFUND_FAILED = "Failed to process refund";
+
 }
 
