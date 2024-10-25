@@ -1,5 +1,6 @@
 package com.ems.EventsService.services.implementations;
 
+import com.ems.EventsService.dto.PaymentRequestDTO;
 import com.ems.EventsService.entity.EmailTemplates;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
@@ -9,10 +10,12 @@ import com.ems.EventsService.enums.RegistrationStatus;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
+import com.ems.EventsService.exceptions.custom.PaymentProcessingException;
 import com.ems.EventsService.mapper.EventsMapper;
 import com.ems.EventsService.mapper.EventsRegistrationMapper;
 import com.ems.EventsService.mapper.ParticipantEventDTOMapper;
 import com.ems.EventsService.model.EventsModel;
+import com.ems.EventsService.model.PaymentTransactionModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
 import com.ems.EventsService.repositories.UsersRepository;
@@ -66,6 +69,9 @@ public class EventsServiceImpl implements EventsService {
 
     @Autowired
     EmailServiceImpl emailService;
+
+    @Autowired
+    PaymentClientService paymentClientService;
 
     @Override
     public EventsModel createEvent(EventsModel eventsModel) {
@@ -372,6 +378,27 @@ public class EventsServiceImpl implements EventsService {
         } catch (Exception e) {
             throw new BusinessValidationException(ErrorMessages.EVENT_RETRIEVAL_ERROR);
         }
+    }
+
+    @Transactional
+    public EventsRegistration processEventRegistration(PaymentRequestDTO request)  throws BusinessValidationException {
+        boolean isAlreadyRegistered = eventsRegistrationRepository
+                .findByEventIdAndRecordStatus(Integer.parseInt(request.getEventId()), DBRecordStatus.ACTIVE)
+                .stream()
+                .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(request.getUserId())));
+
+        if (isAlreadyRegistered) {
+            throw new BusinessValidationException(ErrorMessages.USER_ALREADY_REGISTERED);
+        }
+
+        Integer transactionId = paymentClientService.processPayment(request);
+
+        return registerForEvent(
+                transactionId.toString(),
+                request.getEventId(),
+                request.getUserId(),
+                request.getCreatedBy()
+        );
     }
 
     @ConditionalOnProperty(value = "scheduler.enabled", havingValue = "true", matchIfMissing = false)

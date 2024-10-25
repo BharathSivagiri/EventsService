@@ -1,6 +1,8 @@
 package com.ems.EventsService.services;
 
+import com.ems.EventsService.dto.PaymentRequestDTO;
 import com.ems.EventsService.entity.EventsRegistration;
+import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.model.EventsModel;
 
 import java.util.List;
@@ -21,5 +23,6 @@ public interface EventsService {
 
     EventsRegistration cancelEventRegistration(String transactionId, String eventId, String userId, String createdBy, String paymentStatus);
 
+    EventsRegistration processEventRegistration(PaymentRequestDTO request)  throws BusinessValidationException;
 
 }

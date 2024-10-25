@@ -1,7 +1,10 @@
 package com.ems.EventsService.controller;
 
+import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.dto.RegistrationResponseDTO;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
+import com.ems.EventsService.exceptions.custom.PaymentProcessingException;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.services.AuthService;
 import com.ems.EventsService.services.EventsService;
@@ -15,9 +18,9 @@ import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
+import org.springframework.http.*;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 import java.util.Map;
@@ -34,6 +37,9 @@ public class EventsController {
 
     @Autowired
     AuthService authService;
+
+    @Autowired
+    RestTemplate restTemplate;
 
     @PostMapping("/add")
     @ResponseStatus(HttpStatus.CREATED)
@@ -96,21 +102,14 @@ public class EventsController {
     }
 
     @PostMapping("/registration")
-    @Operation(summary = "Register for an event", description = "Allows a user to register for an event")
-    public ResponseEntity<String> registerForEvent(@RequestBody Map<String, String> registrationData) {
-        String transactionId = registrationData.get("transactionId");
-        String eventId = registrationData.get("eventId");
-        String userId = registrationData.get("userId");
-        String createdBy = registrationData.get("createdBy");
-
-        logger.info("Received registration request - transactionId: {}, eventId: {}, userId: {}, createdBy: {}",
-                transactionId, eventId, userId, createdBy);
-
-        EventsRegistration registration = eventsService.registerForEvent(transactionId, eventId, userId, createdBy);
-
-        logger.info("Registration completed - registrationId: {}, transactionId: {}", registration.getId(), registration.getTransactionId());
-
-        return ResponseEntity.status(HttpStatus.CREATED).body(ErrorMessages.EVENT_REGISTRATION_SUCCESS);
+    public ResponseEntity<?> processRegistration(@RequestBody PaymentRequestDTO request)  throws BusinessValidationException {
+            EventsRegistration registration = eventsService.processEventRegistration(request);
+            return ResponseEntity.status(HttpStatus.CREATED)
+                    .body(new RegistrationResponseDTO(
+                            registration.getId(),
+                            "SUCCESS",
+                            "Registration completed successfully"
+                    ));
     }
 
     @PostMapping("/registrations/cancel")
