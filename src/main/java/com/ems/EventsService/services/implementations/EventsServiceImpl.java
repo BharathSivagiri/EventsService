@@ -31,6 +31,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
@@ -111,7 +112,9 @@ public class EventsServiceImpl implements EventsService {
         Map<String, String> oldValues = Map.of(
                 "name", existingEvent.getEventName(),
                 "location", existingEvent.getEventLocation(),
-                "date", existingEvent.getEventDate()
+                "date", existingEvent.getEventDate(),
+                "capacity", String.valueOf(existingEvent.getEventCapacity()),
+                "fee", String.valueOf(existingEvent.getEventFee())
         );
 
         Optional.ofNullable(eventsModel.getEventName()).ifPresent(existingEvent::setEventName);
@@ -175,6 +178,8 @@ public class EventsServiceImpl implements EventsService {
                                     oldValues.get("name"),
                                     oldValues.get("location"),
                                     oldValues.get("date"),
+                                    oldValues.get("capacity"),
+                                    oldValues.get("fee"),
                                     user.getUsername())
                     ));
         }
@@ -322,7 +327,7 @@ public class EventsServiceImpl implements EventsService {
 
 
     private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
-                                               String oldLocation, String oldDate, String userName) {
+                                               String oldLocation, String oldDate, String oldCapacity, String oldFee, String userName) {
         EmailTemplates template = emailTemplatesRepository.findByTemplateNameAndRecStatus("EVENT_UPDATED", DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
 
@@ -346,15 +351,27 @@ public class EventsServiceImpl implements EventsService {
                     .append(" → ").append(updatedEvent.getEventDate()).append("</li>");
         }
 
+        if (!oldCapacity.equals(String.valueOf(updatedEvent.getEventCapacity()))) {
+            updatedDetails.append("<li>Capacity: ").append(oldCapacity)
+                    .append(" → ").append(updatedEvent.getEventCapacity()).append("</li>");
+        }
+
+        if (!oldFee.equals(String.valueOf(updatedEvent.getEventFee()))) {
+            updatedDetails.append("<li>Fee: ").append(oldFee)
+                    .append(" → ").append(updatedEvent.getEventFee()).append("</li>");
+        }
+
         updatedDetails.append("</ul>");
 
         return emailContent.replace("{userName}", userName)
                 .replace("{eventName}", updatedEvent.getEventName())
                 .replace("{eventLocation}", updatedEvent.getEventLocation())
                 .replace("{eventDate}", updatedEvent.getEventDate())
+                .replace("{eventDescription}", updatedEvent.getEventDescription())
+                .replace("{eventCapacity}", String.valueOf(updatedEvent.getEventCapacity()))
+                .replace("{eventFee}", String.valueOf(updatedEvent.getEventFee()))
                 .replace("{updatedDetails}", updatedDetails.toString());
     }
-
     @Override
     public List<Map<String, Object>> getEventParticipants(Integer eventId) {
         List<Events> events;
