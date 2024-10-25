@@ -1,136 +1,183 @@
 package com.ems.EventsService.services.implementations;
 
+import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.entity.EmailTemplates;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
-import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
 import com.ems.EventsService.enums.RegistrationStatus;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.exceptions.custom.DateInvalidException;
+import com.ems.EventsService.exceptions.custom.PaymentProcessingException;
 import com.ems.EventsService.mapper.EventsMapper;
 import com.ems.EventsService.mapper.EventsRegistrationMapper;
 import com.ems.EventsService.mapper.ParticipantEventDTOMapper;
 import com.ems.EventsService.model.EventsModel;
+import com.ems.EventsService.model.PaymentTransactionModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
 import com.ems.EventsService.repositories.UsersRepository;
 import com.ems.EventsService.services.EventsService;
-import com.ems.EventsService.dto.ParticipantEventDTO;
 import com.ems.EventsService.utility.DateUtils;
+import com.ems.EventsService.utility.constants.ErrorMessages;
+import com.ems.EventsService.utility.constants.AppConstants;
+import com.ems.EventsService.repositories.EmailTemplatesRepository;
 
-import jakarta.persistence.EntityManager;
-import jakarta.persistence.PersistenceContext;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.thymeleaf.TemplateEngine;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-public class EventsServiceImpl implements EventsService
-{
+public class EventsServiceImpl implements EventsService {
     private static final Logger logger = LoggerFactory.getLogger(EventsServiceImpl.class);
 
     @Autowired
-    private EventsRepository eventsRepository;
+    EventsRepository eventsRepository;
 
     @Autowired
-    private UsersRepository usersRepository;
+    UsersRepository usersRepository;
 
     @Autowired
-    private EventsRegistrationRepository eventsRegistrationRepository;
+    EventsRegistrationRepository eventsRegistrationRepository;
 
     @Autowired
-    private EventsMapper eventsMapper;
+    EventsMapper eventsMapper;
 
     @Autowired
-    private ParticipantEventDTOMapper participantEventDTOMapper;
+    ParticipantEventDTOMapper participantEventDTOMapper;
 
     @Autowired
-    private EventsRegistrationMapper eventsRegistrationMapper;
-
-
-    @Autowired
-    private JavaMailSender mailSender;
+    EventsRegistrationMapper eventsRegistrationMapper;
 
     @Autowired
-    private TemplateEngine tempEngine;
+    EmailTemplatesRepository emailTemplatesRepository;
 
-    @PersistenceContext
-    private EntityManager entityManager;
+    @Autowired
+    EmailServiceImpl emailService;
+
+    @Autowired
+    PaymentClientService paymentClientService;
 
     @Override
-    public EventsModel createEvent(EventsModel eventsModel)
-    {
+    public EventsModel createEvent(EventsModel eventsModel) {
         logger.info("Event creation for " + eventsModel.getEventName() + " started");
         if (eventsModel.getEventName() == null || eventsModel.getEventName().trim().isEmpty()) {
-            throw new BusinessValidationException("Event name cannot be empty");
+            throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EMPTY);
         }
-        if (eventsRepository.existsByEventName(eventsModel.getEventName())) {
-            throw new BusinessValidationException("An event with the name '" + eventsModel.getEventName() + "' already exists");
+        if (eventsRepository.existsByEventNameAndRecStatus(eventsModel.getEventName(), DBRecordStatus.ACTIVE)) {
+            throw new BusinessValidationException(ErrorMessages.EVENT_NAME_EXISTS);
         }
         if (eventsModel.getEventDate() == null) {
-            throw new BusinessValidationException("Event date cannot be null");
+            throw new BusinessValidationException(ErrorMessages.EVENT_DATE_NULL);
         }
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyyMMdd");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
         LocalDate eventDate = LocalDate.parse(eventsModel.getEventDate(), formatter);
         if (eventDate.isBefore(LocalDate.now())) {
-            throw new BusinessValidationException("Event date cannot be in the past");
+            throw new BusinessValidationException(ErrorMessages.EVENT_DATE_PAST);
         }
         Events events = eventsMapper.toEntity(eventsModel);
-        events.setCreatedBy("Admin");
-        events.setUpdatedBy("Admin");
+        events.setCreatedBy(AppConstants.ADMIN_ROLE);
+        events.setUpdatedBy(AppConstants.ADMIN_ROLE);
         events.setCreatedDate(String.valueOf(LocalDate.now()));
         events.setUpdatedDate(String.valueOf(LocalDate.now()));
         Events savedEvent = eventsRepository.save(events);
         logger.info("Event creation for " + eventsModel.getEventName() + " completed");
         return eventsMapper.toModel(savedEvent);
     }
+
     @Transactional
     @Override
-    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel)
-    {
+    public EventsModel updateEvent(Integer eventId, EventsModel eventsModel) {
         logger.info("Event update for ID {} started", eventId);
 
         Events existingEvent = eventsRepository.findById(eventId)
-                .orElseThrow(() -> new BusinessValidationException("Event with ID '" + eventId + "' not found"));
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.EVENT_NOT_FOUND));
 
-        if (eventsModel.getEventName() != null) existingEvent.setEventName(eventsModel.getEventName());
-        if (eventsModel.getEventDescription() != null) existingEvent.setEventDescription(eventsModel.getEventDescription());
-        if (eventsModel.getEventLocation() != null) existingEvent.setEventLocation(eventsModel.getEventLocation());
-        if (eventsModel.getEventCapacity() != null) existingEvent.setEventCapacity(eventsModel.getEventCapacity());
-        if (eventsModel.getEventFee() != null) existingEvent.setEventFee(Double.parseDouble(eventsModel.getEventFee()));
+        Map<String, String> oldValues = Map.of(
+                "name", existingEvent.getEventName(),
+                "location", existingEvent.getEventLocation(),
+                "date", existingEvent.getEventDate()
+        );
+
+        Optional.ofNullable(eventsModel.getEventName()).ifPresent(existingEvent::setEventName);
+        Optional.ofNullable(eventsModel.getEventDescription()).ifPresent(existingEvent::setEventDescription);
+        Optional.ofNullable(eventsModel.getEventLocation()).ifPresent(existingEvent::setEventLocation);
+        Optional.ofNullable(eventsModel.getEventCapacity()).ifPresent(existingEvent::setEventCapacity);
+        Optional.ofNullable(eventsModel.getEventFee()).ifPresent(fee -> existingEvent.setEventFee(Double.parseDouble(fee)));
+        Optional.ofNullable(eventsModel.getEventStatus()).ifPresent(status -> existingEvent.setEventStatus(EventStatus.fromString(status)));
+        Optional.ofNullable(eventsModel.getRecStatus()).ifPresent(status -> existingEvent.setRecStatus(DBRecordStatus.fromString(status)));
 
         try {
             existingEvent.setEventDate(String.valueOf(DateUtils.convertToDate(eventsModel.getEventDate())));
-        } catch (DateTimeParseException e)
-        {
-            throw new DateInvalidException("Invalid date format. Please use yyyyMMdd format.");
+        } catch (DateTimeParseException e) {
+            throw new DateInvalidException(ErrorMessages.INVALID_DATE_FORMAT);
         }
 
-        if (eventsModel.getEventStatus() != null) {
-            existingEvent.setEventStatus(EventStatus.fromString(eventsModel.getEventStatus()));
-        }
-
-        existingEvent.setCreatedBy("Admin");
-        existingEvent.setUpdatedBy("Admin");
-        existingEvent.setCreatedDate(String.valueOf(LocalDate.now()));
-        existingEvent.setUpdatedDate(String.valueOf(LocalDate.now()));
+        String currentDate = String.valueOf(LocalDate.now());
+        existingEvent.setCreatedBy(AppConstants.ADMIN_ROLE);
+        existingEvent.setUpdatedBy(AppConstants.ADMIN_ROLE);
+        existingEvent.setCreatedDate(currentDate);
+        existingEvent.setUpdatedDate(currentDate);
 
         Events updatedEvent = eventsRepository.save(existingEvent);
         logger.info("Event update for ID {} completed", eventId);
+
+        List<EventsRegistration> registrations = eventsRegistrationRepository.findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE);
+
+        if (eventsModel.getEventStatus() != null &&
+                EventStatus.fromString(eventsModel.getEventStatus()) == EventStatus.CANCELLED) {
+
+            registrations.stream()
+                    .map(reg -> usersRepository.findById(reg.getUserId()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .forEach(user -> {
+                        EmailTemplates template = emailTemplatesRepository
+                                .findByTemplateNameAndRecStatus("EVENT_CANCELLED", DBRecordStatus.ACTIVE)
+                                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+                        String emailContent = template.getTemplateCode()
+                                .replace("{userName}", user.getUsername())
+                                .replace("{eventName}", updatedEvent.getEventName())
+                                .replace("{eventLocation}", updatedEvent.getEventLocation())
+                                .replace("{eventDate}", updatedEvent.getEventDate());
+
+                        emailService.sendHtmlMessage(
+                                user.getEmail(),
+                                "Event Cancelled: " + updatedEvent.getEventName(),
+                                emailContent
+                        );
+                    });
+        } else {
+            registrations.stream()
+                    .map(reg -> usersRepository.findById(reg.getUserId()))
+                    .filter(Optional::isPresent)
+                    .map(Optional::get)
+                    .forEach(user -> emailService.sendHtmlMessage(
+                            user.getEmail(),
+                            "Event Update: " + updatedEvent.getEventName(),
+                            getUpdatedEventEmailContent(updatedEvent,
+                                    oldValues.get("name"),
+                                    oldValues.get("location"),
+                                    oldValues.get("date"),
+                                    user.getUsername())
+                    ));
+        }
 
         return eventsMapper.toModel(updatedEvent);
     }
@@ -141,7 +188,7 @@ public class EventsServiceImpl implements EventsService
         logger.info("Soft delete for event with ID {} started", eventId);
 
         Events event = eventsRepository.findById(eventId)
-                .orElseThrow(() -> new BusinessValidationException("Event with ID '" + eventId + "' not found"));
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.EVENT_NOT_FOUND));
 
         event.setRecStatus(DBRecordStatus.INACTIVE);
 
@@ -151,40 +198,270 @@ public class EventsServiceImpl implements EventsService
     }
 
     @Override
-    public List<?> getAllEvents(boolean isAdmin, String keyword)
-    {
+    public List<?> getAllEvents(boolean isAdmin, String keyword) {
         logger.info("Fetching all events started");
-        List<Events> events = isAdmin
-                ? eventsRepository.findByEventNameOrEventLocationContainingIgnoreCase(keyword, keyword)
-                : eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
+
+        List<Events> events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
         if (isAdmin) {
-            result = events.stream().map(eventsMapper::toModel).collect(Collectors.toList());
+            result = events.stream()
+                    .map(event ->
+                    {
+                        Map<String, Object> filteredEvent = new HashMap<>();
+                        filteredEvent.put("eventId", event.getEventId());
+                        filteredEvent.put("eventName", event.getEventName());
+                        filteredEvent.put("eventDescription", event.getEventDescription());
+                        filteredEvent.put("eventDate", event.getEventDate());
+                        filteredEvent.put("eventLocation", event.getEventLocation());
+                        filteredEvent.put("eventCapacity", event.getEventCapacity());
+                        filteredEvent.put("eventFee", event.getEventFee());
+                        filteredEvent.put("eventStatus", event.getEventStatus());
+                        return filteredEvent;
+                    })
+                    .collect(Collectors.toList());
         } else {
             result = events.stream().map(participantEventDTOMapper::toDTO).collect(Collectors.toList());
         }
+
         logger.info("Fetching all events completed");
         return result;
     }
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
+        List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
+                .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
+
+        boolean isAlreadyRegistered = existingRegistrations.stream()
+                .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(userId)));
+
+        if (isAlreadyRegistered) {
+            throw new BusinessValidationException(ErrorMessages.EVENT_ALREADY_REGISTERED);
+        }
+
         Events event = eventsRepository.findById(Integer.parseInt(eventId))
-                .orElseThrow(() -> new DataNotFoundException("Event not found with ID: " + eventId));
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
 
         if (event.getEventCapacity() <= 0) {
-            throw new BusinessValidationException("Event is already at full capacity");
+            throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
         }
 
         event.setEventCapacity(event.getEventCapacity() - 1);
         eventsRepository.save(event);
 
         EventsRegistration registration = eventsRegistrationMapper.toEntity(transactionId, eventId, userId, createdBy);
-        return eventsRegistrationRepository.save(registration);
+        EventsRegistration savedRegistration = eventsRegistrationRepository.save(registration);
+
+        var user = usersRepository.findById(Integer.parseInt(userId))
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+        EmailTemplates template = emailTemplatesRepository
+                .findByTemplateNameAndRecStatus("REGISTRATION_SUCCESS", DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+        String emailContent = template.getTemplateCode()
+                .replace("{userName}", user.getUsername())
+                .replace("{eventName}", event.getEventName())
+                .replace("{eventLocation}", event.getEventLocation())
+                .replace("{eventDate}", event.getEventDate())
+                .replace("{registrationId}", savedRegistration.getId().toString());
+
+        emailService.sendHtmlMessage(
+                user.getEmail(),
+                "Event Registration Confirmation: " + event.getEventName(),
+                emailContent
+        );
+
+        return savedRegistration;
+    }
+
+    @Transactional
+    public EventsRegistration cancelEventRegistration(PaymentRequestDTO request) {
+        EventsRegistration registration = eventsRegistrationRepository
+                .findByEventIdAndUserIdAndRecordStatus(
+                        Integer.parseInt(request.getEventId()),
+                        Integer.parseInt(request.getUserId()),
+                        DBRecordStatus.ACTIVE
+                ).orElseThrow(() -> new DataNotFoundException(ErrorMessages.REGISTRATION_NOT_FOUND));
+
+        Events event = eventsRepository.findById(Integer.parseInt(request.getEventId()))
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
+
+        event.setEventCapacity(event.getEventCapacity() + 1);
+        eventsRepository.save(event);
+
+        request.setTransactionType("CREDIT");
+        request.setAmountPaid(String.valueOf(event.getEventFee()));
+        Integer refundTransactionId = paymentClientService.processRefund(request);
+
+        registration.setRegistrationStatus(RegistrationStatus.CANCELLED);
+        registration.setRecordStatus(DBRecordStatus.INACTIVE);
+        registration.setLastUpdatedDate(LocalDateTime.now().toString());
+        registration.setLastUpdatedBy(request.getCreatedBy());
+
+        EventsRegistration cancelledRegistration = eventsRegistrationRepository.save(registration);
+
+        return cancelledRegistration;
+    }
+
+    private void validateCancellationRequest(Events event, EventsRegistration registration) {
+        // Check if event date has passed
+        LocalDate eventDate = LocalDate.parse(event.getEventDate(),
+                DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT));
+
+        if (eventDate.isBefore(LocalDate.now())) {
+            throw new BusinessValidationException(ErrorMessages.PAST_EVENT_CANCELLATION);
+        }
+
+        // Check if already cancelled
+        if (registration.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
+            throw new BusinessValidationException(ErrorMessages.ALREADY_CANCELLED);
+        }
     }
 
 
+    private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
+                                               String oldLocation, String oldDate, String userName) {
+        EmailTemplates template = emailTemplatesRepository.findByTemplateNameAndRecStatus("EVENT_UPDATED", DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+        String emailContent = template.getTemplateCode();
+
+        StringBuilder updatedDetails = new StringBuilder();
+        updatedDetails.append("<ul>");
+
+        if (!oldName.equals(updatedEvent.getEventName())) {
+            updatedDetails.append("<li>Event Name: ").append(oldName)
+                    .append(" → ").append(updatedEvent.getEventName()).append("</li>");
+        }
+
+        if (!oldLocation.equals(updatedEvent.getEventLocation())) {
+            updatedDetails.append("<li>Location: ").append(oldLocation)
+                    .append(" → ").append(updatedEvent.getEventLocation()).append("</li>");
+        }
+
+        if (!oldDate.equals(updatedEvent.getEventDate())) {
+            updatedDetails.append("<li>Date: ").append(oldDate)
+                    .append(" → ").append(updatedEvent.getEventDate()).append("</li>");
+        }
+
+        updatedDetails.append("</ul>");
+
+        return emailContent.replace("{userName}", userName)
+                .replace("{eventName}", updatedEvent.getEventName())
+                .replace("{eventLocation}", updatedEvent.getEventLocation())
+                .replace("{eventDate}", updatedEvent.getEventDate())
+                .replace("{updatedDetails}", updatedDetails.toString());
+    }
+
+    @Override
+    public List<Map<String, Object>> getEventParticipants(Integer eventId) {
+        List<Events> events;
+        try {
+            if (eventId != null) {
+                events = Collections.singletonList(eventsRepository.findById(eventId)
+                        .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND)));
+            } else {
+                events = eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE);
+            }
+
+            return events.stream().map(event ->
+            {
+                Map<String, Object> eventData = new HashMap<>();
+                eventData.put("eventId", event.getEventId());
+                eventData.put("eventName", event.getEventName());
+
+                List<Map<String, Object>> participants = eventsRegistrationRepository
+                        .findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE)
+                        .stream()
+                        .map(registration -> {
+                            Map<String, Object> participant = new HashMap<>();
+                            var user = usersRepository.findById(registration.getUserId())
+                                    .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+                            participant.put("userId", user.getUserId());
+                            participant.put("username", user.getUsername());
+                            participant.put("registrationId", registration.getId());
+                            return participant;
+                        })
+                        .collect(Collectors.toList());
+
+                eventData.put("Participants", participants);
+                return eventData;
+            }).collect(Collectors.toList());
+        } catch (NumberFormatException e) {
+            throw new BusinessValidationException(ErrorMessages.INVALID_EVENT_ID);
+        } catch (Exception e) {
+            throw new BusinessValidationException(ErrorMessages.EVENT_RETRIEVAL_ERROR);
+        }
+    }
+
+    @Transactional
+    public EventsRegistration processEventRegistration(PaymentRequestDTO request)  throws BusinessValidationException {
+        boolean isAlreadyRegistered = eventsRegistrationRepository
+                .findByEventIdAndRecordStatus(Integer.parseInt(request.getEventId()), DBRecordStatus.ACTIVE)
+                .stream()
+                .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(request.getUserId())));
+
+        if (isAlreadyRegistered) {
+            throw new BusinessValidationException(ErrorMessages.USER_ALREADY_REGISTERED);
+        }
+
+        Integer transactionId = paymentClientService.processPayment(request);
+
+        return registerForEvent(
+                transactionId.toString(),
+                request.getEventId(),
+                request.getUserId(),
+                request.getCreatedBy()
+        );
+    }
+
+    @ConditionalOnProperty(value = "scheduler.enabled", havingValue = "true", matchIfMissing = false)
+    @Scheduled(cron = "${scheduler.cron}")
+    public void sendEventReminders() {
+        logger.info("Starting event reminder job");
+
+        LocalDate twoDaysFromNow = LocalDate.now().plusDays(2);
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
+        String targetDate = twoDaysFromNow.format(formatter);
+
+        List<Events> upcomingEvents = eventsRepository.findByEventDateAndRecStatus(
+                targetDate,
+                DBRecordStatus.ACTIVE
+        );
+
+        for (Events event : upcomingEvents) {
+            List<EventsRegistration> registrations = eventsRegistrationRepository
+                    .findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE);
+
+            for (EventsRegistration registration : registrations) {
+                var user = usersRepository.findById(registration.getUserId())
+                        .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+                EmailTemplates template = emailTemplatesRepository
+                        .findByTemplateNameAndRecStatus("EVENT_NOTIFICATION", DBRecordStatus.ACTIVE)
+                        .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+                String emailContent = template.getTemplateCode()
+                        .replace("{userName}", user.getUsername())
+                        .replace("{eventName}", event.getEventName())
+                        .replace("{eventLocation}", event.getEventLocation())
+                        .replace("{eventDate}", event.getEventDate())
+                        .replace("{registrationId}", registration.getId().toString());
+
+                emailService.sendHtmlMessage(
+                        user.getEmail(),
+                        "Upcoming Event Reminder: " + event.getEventName(),
+                        emailContent
+                );
+
+                logger.info("Sent reminder for event {} to user {}", event.getEventId(), user.getUserId());
+            }
+        }
+        logger.info("Completed event reminder job");
+    }
 }
 
 

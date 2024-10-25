@@ -8,6 +8,7 @@ import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.mapper.AuthTokenMapper;
 import com.ems.EventsService.repositories.AuthTokenRepository;
 import com.ems.EventsService.repositories.UsersRepository;
+import com.ems.EventsService.utility.constants.ErrorMessages;
 
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -26,22 +27,22 @@ public class AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired
-    private UsersRepository usersRepository;
+    UsersRepository usersRepository;
 
     @Autowired
-    private AuthTokenRepository authTokenRepository;
+    AuthTokenRepository authTokenRepository;
 
     @Autowired
-    private AuthTokenMapper authTokenMapper;
+    AuthTokenMapper authTokenMapper;
 
-    public String authenticateUser(String username, String password) {
-        Users user = usersRepository.findByUsername(username)
-                .orElseThrow(() -> new BusinessValidationException("User not found"));
+    public String authenticateUser(String customName, String password) {
+        Users user = usersRepository.findByCustomNameAndRecStatus(customName, DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
 
         if (!password.equals(user.getPassword())) {
-            throw new BusinessValidationException("Invalid password");
+            throw new BusinessValidationException(ErrorMessages.INVALID_PASSWORD);
         }
-
+        logger.info("User authenticated successfully");
         return generateToken(user);
     }
 
@@ -51,52 +52,51 @@ public class AuthService {
 
         AuthToken authToken = authTokenMapper.toEntity(user, token, now);
         authTokenRepository.save(authToken);
-
+        logger.info("Token generated successfully");
         return token;
     }
 
     public boolean isAdmin(String token) {
-        AuthToken authToken = authTokenRepository.findByAuthToken(token)
-                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
+        AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.INVALID_TOKEN));
 
         Users user = usersRepository.findById(authToken.getUserIdAuth())
-                .orElseThrow(() -> new BusinessValidationException("User not found"));
-
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
+        logger.info("User is admin: {}", user.getUserType() == UsersType.ADMIN);
         return user.getUserType() == UsersType.ADMIN;
     }
 
     @Transactional
     public void validateToken(String token, int userId) {
-        AuthToken authToken = authTokenRepository.findByAuthToken(token)
-                .orElseThrow(() -> new BusinessValidationException("Invalid token"));
+        AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.INVALID_TOKEN));
 
         if (authToken.getUserIdAuth() != userId) {
-            throw new BusinessValidationException("User mismatch");
+            throw new BusinessValidationException(ErrorMessages.USER_MISMATCH);
         }
 
         if (authToken.getRecStatus() != DBRecordStatus.ACTIVE) {
-            throw new BusinessValidationException("Token is expired");
+            throw new BusinessValidationException(ErrorMessages.TOKEN_EXPIRED);
         }
 
         LocalDateTime now = LocalDateTime.now();
         if (now.isAfter(authToken.getResetTime())) {
             authToken.setRecStatus(DBRecordStatus.INACTIVE);
             authTokenRepository.save(authToken);
-            throw new BusinessValidationException("Token is inactive");
+            throw new BusinessValidationException(ErrorMessages.TOKEN_INACTIVE);
         }
+        logger.info("Token validated successfully");
     }
 
     @Scheduled(fixedRate = 120000)
     @Transactional
     public void updateExpiredTokens() {
-//        logger.info("Updating expired tokens");
         LocalDateTime now = LocalDateTime.now();
         List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBeforeAndRecStatus(now, DBRecordStatus.ACTIVE);
-//        logger.info("Found {} expired tokens", expiredTokens.size());
         for (AuthToken token : expiredTokens) {
             token.setRecStatus(DBRecordStatus.INACTIVE);
             authTokenRepository.save(token);
         }
-//        logger.info("Finished updating expired tokens");
+        logger.info("Expired tokens updated successfully");
     }
 }

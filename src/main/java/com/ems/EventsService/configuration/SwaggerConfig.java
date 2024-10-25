@@ -6,9 +6,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Configuration
-public class SwaggerConfig {
+public class SwaggerConfig
+{
     @Bean
-    public OpenAPI customOpenAPI() {
+    public OpenAPI customOpenAPI()
+    {
         return new OpenAPI()
                 .info(new Info().title("Events Management System API")
                         .description("API for managing events")

@@ -9,8 +9,10 @@ import org.springframework.stereotype.Component;
 import java.time.LocalDateTime;
 
 @Component
-public class AuthTokenMapper {
-    public AuthToken toEntity(Users user, String token, LocalDateTime now) {
+public class AuthTokenMapper
+{
+    public AuthToken toEntity(Users user, String token, LocalDateTime now)
+    {
         AuthToken authToken = new AuthToken();
         authToken.setUserIdAuth(user.getUserId());
         authToken.setCreationTime(now);

@@ -1,16 +1,16 @@
-package com.ems.EventsService.model;
+package com.ems.EventsService.dto;
 
 import lombok.Data;
 
 @Data
-public class PaymentTransactionModel
-{
-    private String id;
+public class PaymentRequestDTO {
     private String eventId;
     private String userId;
     private String amountPaid;
     private String paymentMode;
+    private String bankId;
     private String transactionType;
-    private String paymentStatus;
     private String createdBy;
+    private String paymentStatus;
 }
+

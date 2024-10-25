@@ -2,8 +2,9 @@ package com.ems.EventsService.mapper;
 
 import com.ems.EventsService.dto.ParticipantEventDTO;
 import com.ems.EventsService.entity.Events;
-import org.springframework.stereotype.Component;
+import com.ems.EventsService.utility.constants.AppConstants;
 
+import org.springframework.stereotype.Component;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -13,8 +14,8 @@ public class ParticipantEventDTOMapper
     public ParticipantEventDTO toDTO(Events event)
     {
 
-        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern("dd-MM-yyyy");
+        DateTimeFormatter inputFormatter = DateTimeFormatter.ofPattern(AppConstants.DATE_INPUT);
+        DateTimeFormatter outputFormatter = DateTimeFormatter.ofPattern(AppConstants.DATE_OUTPUT);
 
         ParticipantEventDTO dto = new ParticipantEventDTO();
         dto.setEventId(String.valueOf(event.getEventId()));
@@ -25,7 +26,8 @@ public class ParticipantEventDTOMapper
         dto.setEventFee(String.valueOf(event.getEventFee()));
         dto.setEventStatus(event.getEventStatus().toString());
 
-        if (event.getEventDate() != null) {
+        if (event.getEventDate() != null)
+        {
             LocalDate date = LocalDate.parse(event.getEventDate(), inputFormatter);
             dto.setEventDate(date.format(outputFormatter));
         }

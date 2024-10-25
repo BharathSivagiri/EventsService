@@ -2,6 +2,7 @@ package com.ems.EventsService.entity;
 
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.RegistrationStatus;
+
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
