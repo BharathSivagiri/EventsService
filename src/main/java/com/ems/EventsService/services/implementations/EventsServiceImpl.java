@@ -203,7 +203,8 @@ public class EventsServiceImpl implements EventsService {
     public List<?> getAllEvents(boolean isAdmin, String keyword) {
         logger.info("Fetching all events started");
 
-        List<Events> events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
+        List<Events> events = eventsRepository.findByEventNameOrEventLocationOrEventDateContainingIgnoreCaseAndRecStatus(
+                keyword, keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
         if (isAdmin) {
@@ -232,6 +233,7 @@ public class EventsServiceImpl implements EventsService {
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
+        logger.info("Registering for event with ID {} started", eventId);
         List<EventsRegistration> existingRegistrations = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE);
 
@@ -254,7 +256,9 @@ public class EventsServiceImpl implements EventsService {
 
         EventsRegistration registration = eventsRegistrationMapper.toEntity(transactionId, eventId, userId, createdBy);
         EventsRegistration savedRegistration = eventsRegistrationRepository.save(registration);
+        logger.info("Registered for event with ID {} completed", eventId);
 
+        logger.info("Sending registration success email to user with ID {} started", userId);
         var user = usersRepository.findById(Integer.parseInt(userId))
                 .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
 
@@ -274,12 +278,13 @@ public class EventsServiceImpl implements EventsService {
                 "Event Registration Confirmation: " + event.getEventName(),
                 emailContent
         );
-
+        logger.info("Sending registration success email to user with ID {} completed", userId);
         return savedRegistration;
     }
 
     @Transactional
     public EventsRegistration cancelEventRegistration(PaymentRequestDTO request) {
+        logger.info("Cancelling registration for event with ID {} started", request.getEventId());
         EventsRegistration registration = eventsRegistrationRepository
                 .findByEventIdAndUserIdAndRecordStatus(
                         Integer.parseInt(request.getEventId()),
@@ -303,23 +308,8 @@ public class EventsServiceImpl implements EventsService {
         registration.setLastUpdatedBy(request.getCreatedBy());
 
         EventsRegistration cancelledRegistration = eventsRegistrationRepository.save(registration);
-
+        logger.info("Cancelling registration for event with ID {} completed", request.getEventId());
         return cancelledRegistration;
-    }
-
-    private void validateCancellationRequest(Events event, EventsRegistration registration) {
-        // Check if event date has passed
-        LocalDate eventDate = LocalDate.parse(event.getEventDate(),
-                DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT));
-
-        if (eventDate.isBefore(LocalDate.now())) {
-            throw new BusinessValidationException(ErrorMessages.PAST_EVENT_CANCELLATION);
-        }
-
-        // Check if already cancelled
-        if (registration.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
-            throw new BusinessValidationException(ErrorMessages.ALREADY_CANCELLED);
-        }
     }
 
 
@@ -371,6 +361,7 @@ public class EventsServiceImpl implements EventsService {
     }
     @Override
     public List<Map<String, Object>> getEventParticipants(Integer eventId) {
+        logger.info("Fetching participants for event with ID {} started", eventId);
         List<Events> events;
         try {
             if (eventId != null) {
@@ -402,6 +393,7 @@ public class EventsServiceImpl implements EventsService {
                         .collect(Collectors.toList());
 
                 eventData.put("Participants", participants);
+                logger.info("Fetched participants for event with ID {} successfully", eventId);
                 return eventData;
             }).collect(Collectors.toList());
         } catch (NumberFormatException e) {

@@ -6,13 +6,12 @@ import com.ems.EventsService.enums.DBRecordStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDate;
 import java.util.List;
 
 @Repository
 public interface EventsRepository extends JpaRepository<Events, Integer>
 {
-    List<Events> findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(String name, String location, DBRecordStatus recStatus);
+    List<Events> findByEventNameOrEventLocationOrEventDateContainingIgnoreCaseAndRecStatus(String name, String location, String date, DBRecordStatus recStatus);
 
     List<Events> findByRecStatus(DBRecordStatus recStatus);
 
