@@ -307,21 +307,6 @@ public class EventsServiceImpl implements EventsService {
         return cancelledRegistration;
     }
 
-    private void validateCancellationRequest(Events event, EventsRegistration registration) {
-        // Check if event date has passed
-        LocalDate eventDate = LocalDate.parse(event.getEventDate(),
-                DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT));
-
-        if (eventDate.isBefore(LocalDate.now())) {
-            throw new BusinessValidationException(ErrorMessages.PAST_EVENT_CANCELLATION);
-        }
-
-        // Check if already cancelled
-        if (registration.getRegistrationStatus() == RegistrationStatus.CANCELLED) {
-            throw new BusinessValidationException(ErrorMessages.ALREADY_CANCELLED);
-        }
-    }
-
 
     private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
                                                String oldLocation, String oldDate, String oldCapacity, String oldFee, String userName) {
