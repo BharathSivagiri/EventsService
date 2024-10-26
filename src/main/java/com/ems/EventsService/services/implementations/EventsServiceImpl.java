@@ -203,7 +203,8 @@ public class EventsServiceImpl implements EventsService {
     public List<?> getAllEvents(boolean isAdmin, String keyword) {
         logger.info("Fetching all events started");
 
-        List<Events> events = eventsRepository.findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(keyword, keyword, DBRecordStatus.ACTIVE);
+        List<Events> events = eventsRepository.findByEventNameOrEventLocationOrEventDateContainingIgnoreCaseAndRecStatus(
+                keyword, keyword, keyword, DBRecordStatus.ACTIVE);
 
         List<?> result;
         if (isAdmin) {

@@ -11,7 +11,7 @@ import java.util.List;
 @Repository
 public interface EventsRepository extends JpaRepository<Events, Integer>
 {
-    List<Events> findByEventNameOrEventLocationContainingIgnoreCaseAndRecStatus(String name, String location, DBRecordStatus recStatus);
+    List<Events> findByEventNameOrEventLocationOrEventDateContainingIgnoreCaseAndRecStatus(String name, String location, String date, DBRecordStatus recStatus);
 
     List<Events> findByRecStatus(DBRecordStatus recStatus);
 
