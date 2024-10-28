@@ -200,36 +200,44 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Override
-    public List<?> getAllEvents(boolean isAdmin, String keyword) {
+    public List<?> getAllEvents(boolean isAdmin, String keyword, String dateA, String dateB) {
         logger.info("Fetching all events started");
 
-        List<Events> events = eventsRepository.findByEventNameOrEventLocationOrEventDateContainingIgnoreCaseAndRecStatus(
-                keyword, keyword, keyword, DBRecordStatus.ACTIVE);
-
-        List<?> result;
-        if (isAdmin) {
-            result = events.stream()
-                    .map(event ->
-                    {
-                        Map<String, Object> filteredEvent = new HashMap<>();
-                        filteredEvent.put("eventId", event.getEventId());
-                        filteredEvent.put("eventName", event.getEventName());
-                        filteredEvent.put("eventDescription", event.getEventDescription());
-                        filteredEvent.put("eventDate", event.getEventDate());
-                        filteredEvent.put("eventLocation", event.getEventLocation());
-                        filteredEvent.put("eventCapacity", event.getEventCapacity());
-                        filteredEvent.put("eventFee", event.getEventFee());
-                        filteredEvent.put("eventStatus", event.getEventStatus());
-                        return filteredEvent;
-                    })
-                    .collect(Collectors.toList());
+        List<Events> events;
+        if (dateA != null && dateB != null) {
+            events = eventsRepository.findByEventDateBetweenAndRecStatus(
+                    dateA, dateB, DBRecordStatus.ACTIVE);
         } else {
-            result = events.stream().map(participantEventDTOMapper::toDTO).collect(Collectors.toList());
+            events = eventsRepository.findByRecStatusAndEventNameContainingIgnoreCaseOrEventLocationContainingIgnoreCase(
+                    DBRecordStatus.ACTIVE, keyword, keyword);
+        }
+
+        if (events.isEmpty()) {
+            throw new DataNotFoundException(ErrorMessages.NO_EVENTS_FOUND);
+        }
+
+        List<?> result = events.stream()
+                .map(event -> {
+                    Map<String, Object> filteredEvent = new HashMap<>();
+                    filteredEvent.put("eventId", event.getEventId());
+                    filteredEvent.put("eventName", event.getEventName());
+                    filteredEvent.put("eventDescription", event.getEventDescription());
+                    filteredEvent.put("eventDate", event.getEventDate());
+                    filteredEvent.put("eventLocation", event.getEventLocation());
+                    filteredEvent.put("eventCapacity", event.getEventCapacity());
+                    filteredEvent.put("eventFee", event.getEventFee());
+                    filteredEvent.put("eventStatus", event.getEventStatus());
+                    return filteredEvent;
+                })
+                .collect(Collectors.toList());
+        if (result.isEmpty()) {
+            throw new DataNotFoundException(ErrorMessages.NO_EVENTS_FOUND);
         }
 
         logger.info("Fetching all events completed");
         return result;
     }
+
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {

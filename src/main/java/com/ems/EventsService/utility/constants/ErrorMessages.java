@@ -32,5 +32,8 @@ public class ErrorMessages {
     public static final String USER_ALREADY_REGISTERED = "User is already registered for this event";
     public static final String PAST_EVENT_CANCELLATION = "Cannot cancel registration for past events";
     public static final String ALREADY_CANCELLED = "Registration is already cancelled";
+    public static final String NO_EVENTS_FOUND = "No events found for the given criteria";
+    public static final String INVALID_DATE_RANGE = "Date1 must be before or equal to Date2";
+
 }
 

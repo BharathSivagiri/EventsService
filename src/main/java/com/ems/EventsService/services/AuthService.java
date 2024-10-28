@@ -91,6 +91,7 @@ public class AuthService {
     @Scheduled(fixedRate = 120000)
     @Transactional
     public void updateExpiredTokens() {
+        logger.info("Update expired tokens started");
         LocalDateTime now = LocalDateTime.now();
         List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBeforeAndRecStatus(now, DBRecordStatus.ACTIVE);
         for (AuthToken token : expiredTokens) {

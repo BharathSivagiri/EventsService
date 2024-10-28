@@ -120,20 +120,23 @@ public class EventsController {
 
     @GetMapping("/view")
     @Operation(
-        summary = "View all events",
-        description = "Retrieves all active events based on user access level",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Events retrieved successfully"),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+            summary = "View all events",
+            description = "Retrieves all active events based on user access level. Supports both keyword search and date range filtering",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Events retrieved successfully"),
+                    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+                    @ApiResponse(responseCode = "404", description = "No events found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+            }
     )
     public ResponseEntity<?> getAllEvents(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @RequestParam(required = false) String keyword) {
+            @RequestParam(required = false) String keyword,
+            @RequestParam(required = false) String dateA,
+            @RequestParam(required = false) String dateB) {
         authService.validateToken(token, userId);
         boolean isAdmin = authService.isAdmin(token);
-        List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "");
+        List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "", dateA, dateB);
         return ResponseEntity.ok(events);
     }
 

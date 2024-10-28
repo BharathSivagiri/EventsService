@@ -15,7 +15,7 @@ public interface EventsService {
 
     void deleteEvent(Integer eventId);
 
-    List<?> getAllEvents(boolean isAdmin, String keyword);
+    List<?> getAllEvents(boolean isAdmin, String keyword, String dateA, String dateB);
 
     EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy);
 
