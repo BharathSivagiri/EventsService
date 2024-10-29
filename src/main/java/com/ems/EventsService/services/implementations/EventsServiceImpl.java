@@ -4,6 +4,7 @@ import com.ems.EventsService.dto.PaymentRequestDTO;
 import com.ems.EventsService.entity.EmailTemplates;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
+import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
 import com.ems.EventsService.enums.RegistrationStatus;
@@ -412,7 +413,8 @@ public class EventsServiceImpl implements EventsService {
     }
 
     @Transactional
-    public EventsRegistration processEventRegistration(PaymentRequestDTO request)  throws BusinessValidationException {
+    public EventsRegistration processEventRegistration(PaymentRequestDTO request) throws BusinessValidationException {
+        // Check if already registered
         boolean isAlreadyRegistered = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(request.getEventId()), DBRecordStatus.ACTIVE)
                 .stream()
@@ -421,6 +423,13 @@ public class EventsServiceImpl implements EventsService {
         if (isAlreadyRegistered) {
             throw new BusinessValidationException(ErrorMessages.USER_ALREADY_REGISTERED);
         }
+
+        // Get user details to fetch account number
+        Users user = usersRepository.findById(Integer.parseInt(request.getUserId()))
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+        // Set the account number in the payment request
+        request.setAccountNumber(user.getAccount());
 
         Integer transactionId = paymentClientService.processPayment(request);
 
@@ -431,6 +440,7 @@ public class EventsServiceImpl implements EventsService {
                 request.getCreatedBy()
         );
     }
+
 
     @ConditionalOnProperty(value = "scheduler.enabled", havingValue = "true", matchIfMissing = false)
     @Scheduled(cron = "${scheduler.cron}")
