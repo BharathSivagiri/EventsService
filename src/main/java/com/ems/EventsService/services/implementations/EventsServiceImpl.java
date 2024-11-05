@@ -294,6 +294,7 @@ public class EventsServiceImpl implements EventsService {
     @Transactional
     public EventsRegistration cancelEventRegistration(PaymentRequestDTO request) {
         logger.info("Cancelling registration for event with ID {} started", request.getEventId());
+
         EventsRegistration registration = eventsRegistrationRepository
                 .findByEventIdAndUserIdAndRecordStatus(
                         Integer.parseInt(request.getEventId()),
@@ -304,13 +305,24 @@ public class EventsServiceImpl implements EventsService {
         Events event = eventsRepository.findById(Integer.parseInt(request.getEventId()))
                 .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND));
 
+        // Process refund first
+        PaymentRequestDTO refundRequest = new PaymentRequestDTO();
+        refundRequest.setEventId(request.getEventId());
+        refundRequest.setUserId(request.getUserId());
+        refundRequest.setAmountPaid(request.getAmountPaid());
+        refundRequest.setPaymentMode(request.getPaymentMode());
+        refundRequest.setAccountNumber(request.getAccountNumber());
+        refundRequest.setTransactionType(request.getTransactionType());
+        refundRequest.setPaymentStatus(request.getPaymentStatus());
+        refundRequest.setCreatedBy(request.getCreatedBy());
+
+        Integer refundTransactionId = paymentClientService.processRefund(refundRequest);
+
+        // Update event capacity
         event.setEventCapacity(event.getEventCapacity() + 1);
         eventsRepository.save(event);
 
-        request.setTransactionType("CREDIT");
-        request.setAmountPaid(String.valueOf(event.getEventFee()));
-        Integer refundTransactionId = paymentClientService.processRefund(request);
-
+        // Update registration status
         registration.setRegistrationStatus(RegistrationStatus.CANCELLED);
         registration.setRecordStatus(DBRecordStatus.INACTIVE);
         registration.setLastUpdatedDate(LocalDateTime.now().toString());
@@ -318,9 +330,9 @@ public class EventsServiceImpl implements EventsService {
 
         EventsRegistration cancelledRegistration = eventsRegistrationRepository.save(registration);
         logger.info("Cancelling registration for event with ID {} completed", request.getEventId());
+
         return cancelledRegistration;
     }
-
 
     private String getUpdatedEventEmailContent(Events updatedEvent, String oldName,
                                                String oldLocation, String oldDate, String oldCapacity, String oldFee, String userName) {

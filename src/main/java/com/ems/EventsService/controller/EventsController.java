@@ -181,6 +181,7 @@ public class EventsController {
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @RequestBody PaymentRequestDTO request) {
         authService.validateToken(token, userId);
+        request.setUserId(String.valueOf(userId)); // Ensure userId from header is used
         EventsRegistration cancelledRegistration = eventsService.cancelEventRegistration(request);
         return ResponseEntity.ok("Registration cancelled successfully and payment refunded");
     }
