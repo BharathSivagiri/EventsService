@@ -1,6 +1,6 @@
 package com.ems.EventsService.controller;
 
-import com.ems.EventsService.dto.ErrorResponse;
+import com.ems.EventsService.configuration.EventsApiResponses;
 import com.ems.EventsService.dto.PaymentRequestDTO;
 import com.ems.EventsService.dto.RegistrationResponseDTO;
 import com.ems.EventsService.entity.EventsRegistration;
@@ -13,9 +13,6 @@ import com.ems.EventsService.utility.constants.ErrorMessages;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.Schema;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -46,24 +43,15 @@ public class EventsController {
 
     @PostMapping("/add")
     @ResponseStatus(HttpStatus.CREATED)
+    @EventsApiResponses.CreateEventResponses
     @Operation(
         summary = "Create a new event",
-        description = "Creates a new event in the system",
-        responses = {
-            @ApiResponse(responseCode = "201", description = "Event created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Event already exists", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+        description = "Creates a new event in the system"
     )
     public ResponseEntity<String> createEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
                                               @Valid @RequestBody EventsModel eventsModel) {
-        authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorMessages.ACCESS_DENIED);
-        }
-
+        authService.validateAdminAccess(token, userId);
         eventsModel.setCreatedBy(String.valueOf(userId));
         eventsModel.setUpdatedBy(String.valueOf(userId));
 
@@ -73,60 +61,41 @@ public class EventsController {
     }
 
     @PutMapping("/update/{eventId}")
+    @EventsApiResponses.UpdateEventResponses
     @Operation(
         summary = "Update an event",
-        description = "Updates an existing event in the system",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Event updated successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid input", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Event not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+        description = "Updates an existing event in the system"
     )
     public ResponseEntity<String> updateEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
                                               @PathVariable Integer eventId,
                                               @RequestBody EventsModel eventsModel) {
-        authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ErrorMessages.ACCESS_DENIED);
-        }
+        authService.validateAdminAccess(token, userId);
         eventsModel.setUpdatedBy(String.valueOf(userId));
         eventsService.updateEvent(eventId, eventsModel);
         return ResponseEntity.status(HttpStatus.OK).body(ErrorMessages.EVENT_UPDATED);
     }
 
     @DeleteMapping("/delete/{eventId}")
+    @EventsApiResponses.DeleteEventResponses
     @Operation(
         summary = "Delete an event",
-        description = "Changes the record status from active to inactive",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Event deleted successfully"),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Event not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+        description = "Changes the record status from active to inactive"
     )
     public ResponseEntity<String> deleteEvent(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @PathVariable Integer eventId) {
-        authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied");
-        }
+        authService.validateAdminAccess(token, userId);
         eventsService.deleteEvent(eventId);
         return ResponseEntity.ok(ErrorMessages.EVENT_DELETED);
     }
 
     @GetMapping("/view")
+    @EventsApiResponses.GetAllEventsResponses
     @Operation(
             summary = "View all events",
-            description = "Retrieves all active events based on user access level. Supports both keyword search and date range filtering",
-            responses = {
-                    @ApiResponse(responseCode = "200", description = "Events retrieved successfully"),
-                    @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-                    @ApiResponse(responseCode = "404", description = "No events found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-            }
+            description = "Retrieves all active events based on user access level. Supports both keyword search and date range filtering"
     )
     public ResponseEntity<?> getAllEvents(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
@@ -141,15 +110,10 @@ public class EventsController {
     }
 
     @PostMapping("/registration")
+    @EventsApiResponses.ProcessRegistrationResponses
     @Operation(
         summary = "Register for an event",
-        description = "Registers a user for an event",
-        responses = {
-            @ApiResponse(responseCode = "201", description = "Registration successful"),
-            @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "409", description = "Already registered/Event full", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+        description = "Registers a user for an event"
     )
     public ResponseEntity<?> processRegistration(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
@@ -166,15 +130,10 @@ public class EventsController {
     }
 
     @PostMapping("/registration/cancel")
+    @EventsApiResponses.CancelRegistrationResponses
     @Operation(
         summary = "Cancel registration for an event",
-        description = "Cancels a user's registration for an event",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Registration cancelled successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid request", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Registration not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+        description = "Cancels a user's registration for an event"
     )
     public ResponseEntity<?> cancelRegistration(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
@@ -187,23 +146,16 @@ public class EventsController {
     }
 
     @GetMapping("/users/view-participants")
+    @EventsApiResponses.GetEventParticipantsResponses
     @Operation(
         summary = "Get event participants",
-        description = "Returns list of participants for events",
-        responses = {
-            @ApiResponse(responseCode = "200", description = "Participants retrieved successfully"),
-            @ApiResponse(responseCode = "403", description = "Access denied", content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
-            @ApiResponse(responseCode = "404", description = "Event not found", content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
-        }
+        description = "Returns list of participants for events"
     )
     public ResponseEntity<List<Map<String, Object>>> getEventParticipants(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @RequestParam(required = false) Integer eventId) {
-        authService.validateToken(token, userId);
-        if (!authService.isAdmin(token)) {
-            throw new BusinessValidationException(ErrorMessages.ACCESS_DENIED);
-        }
+        authService.validateAdminAccess(token, userId);
         return ResponseEntity.ok(eventsService.getEventParticipants(eventId));
     }
 }

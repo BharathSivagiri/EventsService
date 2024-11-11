@@ -35,5 +35,6 @@ public class ErrorMessages {
     public static final String NO_EVENTS_FOUND = "No events found for the given criteria";
     public static final String INVALID_DATE_RANGE = "Date1 must be before or equal to Date2";
 
+    public static final String INVALID_EMAIL = "Invalid Email format";
 }
 

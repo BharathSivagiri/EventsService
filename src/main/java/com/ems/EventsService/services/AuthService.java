@@ -100,4 +100,14 @@ public class AuthService {
         }
         logger.info("Expired tokens updated successfully");
     }
+
+    public void validateAdminAccess(String token, int userId) {
+        validateToken(token, userId);
+        if (!isAdmin(token)) {
+            throw new BusinessValidationException(ErrorMessages.ACCESS_DENIED);
+        }
+    }
+
 }
+
+

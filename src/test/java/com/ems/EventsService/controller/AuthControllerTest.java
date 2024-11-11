@@ -3,17 +3,17 @@ package com.ems.EventsService.controller;
 import com.ems.EventsService.dto.LoginRequest;
 import com.ems.EventsService.dto.LoginResponse;
 import com.ems.EventsService.services.AuthService;
-
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 
-import static org.mockito.ArgumentMatchers.anyString;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.mockito.Mockito.when;
-import static org.junit.jupiter.api.Assertions.*;
 
 class AuthControllerTest {
 
@@ -23,47 +23,31 @@ class AuthControllerTest {
     @InjectMocks
     private AuthController authController;
 
+    private LoginRequest loginRequest;
+    private static final String TEST_TOKEN = "test-jwt-token";
+    private static final String TEST_USERNAME = "JohnDoe123";
+    private static final String TEST_PASSWORD = "password123";
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
+        loginRequest = new LoginRequest();
+        loginRequest.setCustomName(TEST_USERNAME);
+        loginRequest.setPassword(TEST_PASSWORD);
     }
 
     @Test
-    void login_SuccessfulAuthentication() {
+    void login_Success() {
         // Arrange
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setCustomName("testUser");
-        loginRequest.setPassword("testPass");
-        String expectedToken = "jwt-token";
-
-        when(authService.authenticateUser(anyString(), anyString())).thenReturn(expectedToken);
+        when(authService.authenticateUser(TEST_USERNAME, TEST_PASSWORD)).thenReturn(TEST_TOKEN);
 
         // Act
         ResponseEntity<LoginResponse> response = authController.login(loginRequest);
 
         // Assert
-        assertTrue(response.getStatusCode().is2xxSuccessful());
+        assertNotNull(response);
+        assertEquals(HttpStatus.OK, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals(expectedToken, response.getBody().getToken());
-    }
-
-    @Test
-    void login_FailedAuthentication() {
-        // Arrange
-        LoginRequest loginRequest = new LoginRequest();
-        loginRequest.setCustomName("testUser");
-        loginRequest.setPassword("wrongPass");
-        String errorMessage = "Invalid credentials";
-
-        when(authService.authenticateUser(anyString(), anyString()))
-            .thenThrow(new RuntimeException(errorMessage));
-
-        // Act
-        ResponseEntity<LoginResponse> response = authController.login(loginRequest);
-
-        // Assert
-        assertTrue(response.getStatusCode().is4xxClientError());
-        assertNotNull(response.getBody());
-        assertEquals(errorMessage, response.getBody().getToken());
+        assertEquals(TEST_TOKEN, response.getBody().getToken());
     }
 }

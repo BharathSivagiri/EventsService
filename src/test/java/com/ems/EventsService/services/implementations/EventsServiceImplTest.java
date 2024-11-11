@@ -65,11 +65,11 @@ class EventsServiceImplTest {
     void createEvent_Success() {
         EventsModel model = new EventsModel();
         model.setEventName("Test Event");
-        model.setEventDate("20241110");
+        model.setEventDate("20241120");
 
         Events event = new Events();
         event.setEventName("Test Event");
-        event.setEventDate("20241107");
+        event.setEventDate("20241120");
 
         when(eventsMapper.toEntity(any())).thenReturn(event);
         when(eventsMapper.toModel(any())).thenReturn(model);

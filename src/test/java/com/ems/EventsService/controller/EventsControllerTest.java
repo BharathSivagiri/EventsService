@@ -19,8 +19,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
 class EventsControllerTest {
@@ -38,9 +37,10 @@ class EventsControllerTest {
     private static final int USER_ID = 1;
 
     @Test
-     void createEventSuccess() {
+    void createEventSuccess() {
         EventsModel model = new EventsModel();
-        when(authService.isAdmin(TOKEN)).thenReturn(true);
+        // Update the mock to use validateAdminAccess instead of isAdmin
+        doNothing().when(authService).validateAdminAccess(TOKEN, USER_ID);
 
         ResponseEntity<String> response = eventsController.createEvent(TOKEN, USER_ID, model);
 
@@ -51,17 +51,17 @@ class EventsControllerTest {
     @Test
     void createEventAccessDenied() {
         EventsModel model = new EventsModel();
-        when(authService.isAdmin(TOKEN)).thenReturn(false);
+        doThrow(new BusinessValidationException("Access Denied"))
+            .when(authService).validateAdminAccess(TOKEN, USER_ID);
 
-        ResponseEntity<String> response = eventsController.createEvent(TOKEN, USER_ID, model);
-
-        assertEquals(HttpStatus.FORBIDDEN, response.getStatusCode());
+        assertThrows(BusinessValidationException.class, () ->
+            eventsController.createEvent(TOKEN, USER_ID, model));
     }
 
     @Test
     void updateEventSuccess() {
         EventsModel model = new EventsModel();
-        when(authService.isAdmin(TOKEN)).thenReturn(true);
+        doNothing().when(authService).validateAdminAccess(TOKEN, USER_ID);
 
         ResponseEntity<String> response = eventsController.updateEvent(TOKEN, USER_ID, 1, model);
 
@@ -71,7 +71,7 @@ class EventsControllerTest {
 
     @Test
     void deleteEventSuccess() {
-        when(authService.isAdmin(TOKEN)).thenReturn(true);
+        doNothing().when(authService).validateAdminAccess(TOKEN, USER_ID);
 
         ResponseEntity<String> response = eventsController.deleteEvent(TOKEN, USER_ID, 1);
 
@@ -85,6 +85,7 @@ class EventsControllerTest {
         EventsRegistration registration = new EventsRegistration();
         registration.setId(1);
 
+        doNothing().when(authService).validateToken(TOKEN, USER_ID);
         when(eventsService.processEventRegistration(request)).thenReturn(registration);
 
         ResponseEntity<?> response = eventsController.processRegistration(TOKEN, USER_ID, request);
@@ -98,6 +99,7 @@ class EventsControllerTest {
         PaymentRequestDTO request = new PaymentRequestDTO();
         EventsRegistration registration = new EventsRegistration();
 
+        doNothing().when(authService).validateToken(TOKEN, USER_ID);
         when(eventsService.cancelEventRegistration(request)).thenReturn(registration);
 
         ResponseEntity<?> response = eventsController.cancelRegistration(TOKEN, USER_ID, request);
@@ -108,7 +110,7 @@ class EventsControllerTest {
     @Test
     void getEventParticipantsSuccess() {
         List<Map<String, Object>> participants = List.of(Map.of("userId", 1));
-        when(authService.isAdmin(TOKEN)).thenReturn(true);
+        doNothing().when(authService).validateAdminAccess(TOKEN, USER_ID);
         when(eventsService.getEventParticipants(1)).thenReturn(participants);
 
         ResponseEntity<List<Map<String, Object>>> response =
@@ -120,9 +122,10 @@ class EventsControllerTest {
 
     @Test
     void getEventParticipantsAccessDenied() {
-        when(authService.isAdmin(TOKEN)).thenReturn(false);
+        doThrow(new BusinessValidationException("Access Denied"))
+                .when(authService).validateAdminAccess(TOKEN, USER_ID);
 
         assertThrows(BusinessValidationException.class, () ->
-            eventsController.getEventParticipants(TOKEN, USER_ID, 1));
+                eventsController.getEventParticipants(TOKEN, USER_ID, 1));
     }
 }

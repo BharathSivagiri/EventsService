@@ -380,20 +380,18 @@ public class EventsServiceImpl implements EventsService {
                 .replace("{eventFee}", String.valueOf(updatedEvent.getEventFee()))
                 .replace("{updatedDetails}", updatedDetails.toString());
     }
-    @Override
-    public List<Map<String, Object>> getEventParticipants(Integer eventId) {
-        logger.info("Fetching participants for event with ID {} started", eventId);
-        List<Events> events;
-        try {
-            if (eventId != null) {
-                events = Collections.singletonList(eventsRepository.findById(eventId)
-                        .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND)));
-            } else {
-                events = eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE);
-            }
 
-            return events.stream().map(event ->
-            {
+@Override
+public List<Map<String, Object>> getEventParticipants(Integer eventId) {
+    logger.info("Fetching participants for event with ID {} started", eventId);
+
+    List<Events> events = Optional.ofNullable(eventId)
+            .map(id -> Collections.singletonList(eventsRepository.findById(id)
+                    .orElseThrow(() -> new DataNotFoundException(ErrorMessages.EVENT_NOT_FOUND))))
+            .orElseGet(() -> eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE));
+
+    return events.stream()
+            .map(event -> {
                 Map<String, Object> eventData = new HashMap<>();
                 eventData.put("eventId", event.getEventId());
                 eventData.put("eventName", event.getEventName());
@@ -403,7 +401,7 @@ public class EventsServiceImpl implements EventsService {
                         .stream()
                         .map(registration -> {
                             Map<String, Object> participant = new HashMap<>();
-                            var user = usersRepository.findById(registration.getUserId())
+                            Users user = usersRepository.findById(registration.getUserId())
                                     .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
 
                             participant.put("userId", user.getUserId());
@@ -416,13 +414,9 @@ public class EventsServiceImpl implements EventsService {
                 eventData.put("Participants", participants);
                 logger.info("Fetched participants for event with ID {} successfully", eventId);
                 return eventData;
-            }).collect(Collectors.toList());
-        } catch (NumberFormatException e) {
-            throw new BusinessValidationException(ErrorMessages.INVALID_EVENT_ID);
-        } catch (Exception e) {
-            throw new BusinessValidationException(ErrorMessages.EVENT_RETRIEVAL_ERROR);
-        }
-    }
+            })
+            .collect(Collectors.toList());
+}
 
     @Transactional
     public EventsRegistration processEventRegistration(PaymentRequestDTO request) throws BusinessValidationException {
@@ -453,52 +447,48 @@ public class EventsServiceImpl implements EventsService {
         );
     }
 
-
     @ConditionalOnProperty(value = "scheduler.enabled", havingValue = "true", matchIfMissing = false)
     @Scheduled(cron = "${scheduler.cron}")
     public void sendEventReminders() {
         logger.info("Starting event reminder job");
 
-        LocalDate twoDaysFromNow = LocalDate.now().plusDays(2);
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT);
-        String targetDate = twoDaysFromNow.format(formatter);
+        String targetDate = LocalDate.now().plusDays(2)
+                .format(DateTimeFormatter.ofPattern(AppConstants.DATE_FORMAT));
 
-        List<Events> upcomingEvents = eventsRepository.findByEventDateAndRecStatus(
-                targetDate,
-                DBRecordStatus.ACTIVE
-        );
+        eventsRepository.findByEventDateAndRecStatus(targetDate, DBRecordStatus.ACTIVE)
+                .forEach(this::processEventReminders);
 
-        for (Events event : upcomingEvents) {
-            List<EventsRegistration> registrations = eventsRegistrationRepository
-                    .findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE);
-
-            for (EventsRegistration registration : registrations) {
-                var user = usersRepository.findById(registration.getUserId())
-                        .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
-
-                EmailTemplates template = emailTemplatesRepository
-                        .findByTemplateNameAndRecStatus("EVENT_NOTIFICATION", DBRecordStatus.ACTIVE)
-                        .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
-
-                String emailContent = template.getTemplateCode()
-                        .replace("{userName}", user.getUsername())
-                        .replace("{eventName}", event.getEventName())
-                        .replace("{eventLocation}", event.getEventLocation())
-                        .replace("{eventDate}", event.getEventDate())
-                        .replace("{registrationId}", registration.getId().toString());
-
-                emailService.sendHtmlMessage(
-                        user.getEmail(),
-                        "Upcoming Event Reminder: " + event.getEventName(),
-                        emailContent
-                );
-
-                logger.info("Sent reminder for event {} to user {}", event.getEventId(), user.getUserId());
-            }
-        }
         logger.info("Completed event reminder job");
     }
-}
+
+    private void processEventReminders(Events event) {
+        eventsRegistrationRepository.findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE)
+                .forEach(registration -> sendReminderEmail(event, registration));
+    }
+
+    private void sendReminderEmail(Events event, EventsRegistration registration) {
+        Users user = usersRepository.findById(registration.getUserId())
+                .orElseThrow(() -> new DataNotFoundException(ErrorMessages.USER_NOT_FOUND));
+
+        EmailTemplates template = emailTemplatesRepository
+                .findByTemplateNameAndRecStatus("EVENT_NOTIFICATION", DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new RuntimeException(ErrorMessages.EMAIL_TEMPLATE_NOT_FOUND));
+
+        String emailContent = template.getTemplateCode()
+                .replace("{userName}", user.getUsername())
+                .replace("{eventName}", event.getEventName())
+                .replace("{eventLocation}", event.getEventLocation())
+                .replace("{eventDate}", event.getEventDate())
+                .replace("{registrationId}", registration.getId().toString());
+
+        emailService.sendHtmlMessage(
+                user.getEmail(),
+                "Upcoming Event Reminder: " + event.getEventName(),
+                emailContent
+        );
+
+        logger.info("Sent reminder for event {} to user {}", event.getEventId(), user.getUserId());
+    }}
 
 
 
