@@ -63,7 +63,7 @@ class AuthServiceTest {
         when(authTokenMapper.toEntity(any(), anyString(), any())).thenReturn(testAuthToken);
         when(authTokenRepository.save(any())).thenReturn(testAuthToken);
 
-        String token = authService.authenticateUser("testUser", "password123");
+        String token = String.valueOf(authService.authenticateUser("testUser", "password123"));
         assertNotNull(token);
         verify(authTokenRepository).save(any());
     }

@@ -1,5 +1,6 @@
 package com.ems.EventsService.services;
 
+import com.ems.EventsService.dto.LoginResponse;
 import com.ems.EventsService.entity.AuthToken;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
@@ -35,7 +36,7 @@ public class AuthService {
     @Autowired
     AuthTokenMapper authTokenMapper;
 
-    public String authenticateUser(String customName, String password) {
+    public LoginResponse authenticateUser(String customName, String password) {
         Users user = usersRepository.findByCustomNameAndRecStatus(customName, DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
 
@@ -46,14 +47,14 @@ public class AuthService {
         return generateToken(user);
     }
 
-    private String generateToken(Users user) {
+    private LoginResponse generateToken(Users user) {
         String token = UUID.randomUUID().toString();
         LocalDateTime now = LocalDateTime.now();
 
         AuthToken authToken = authTokenMapper.toEntity(user, token, now);
         authTokenRepository.save(authToken);
         logger.info("Token generated successfully");
-        return token;
+        return new LoginResponse(token, user.getUserId());
     }
 
     public boolean isAdmin(String token) {
@@ -109,5 +110,4 @@ public class AuthService {
     }
 
 }
-
 

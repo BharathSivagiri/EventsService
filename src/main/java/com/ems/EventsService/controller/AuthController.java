@@ -19,15 +19,16 @@ public class AuthController {
 
     @Autowired
     private AuthService authService;
+
     @PostMapping
     @AuthApiResponses.LoginResponses
     @Operation(
-        summary = "User Login",
-        description = "Authenticates a user and returns a JWT token"
+            summary = "User Login",
+            description = "Authenticates a user and returns a JWT token and userId"
     )
     public ResponseEntity<LoginResponse> login(@RequestBody LoginRequest loginRequest) {
-        String token = authService.authenticateUser(loginRequest.getCustomName(), loginRequest.getPassword());
-        return ResponseEntity.ok(new LoginResponse(token));
+        // Get both token and userId from auth service
+        LoginResponse loginResponse = authService.authenticateUser(loginRequest.getCustomName(), loginRequest.getPassword());
+        return ResponseEntity.ok(loginResponse);
     }
 }
-

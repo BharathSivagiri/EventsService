@@ -218,6 +218,7 @@ public class EventsServiceImpl implements EventsService {
         }
 
         List<?> result = events.stream()
+                .filter(event -> event.getRecStatus() == DBRecordStatus.ACTIVE)
                 .map(event -> {
                     Map<String, Object> filteredEvent = new HashMap<>();
                     filteredEvent.put("eventId", event.getEventId());
@@ -231,6 +232,7 @@ public class EventsServiceImpl implements EventsService {
                     return filteredEvent;
                 })
                 .collect(Collectors.toList());
+
         if (result.isEmpty()) {
             throw new DataNotFoundException(ErrorMessages.NO_EVENTS_FOUND);
         }
