@@ -1,5 +1,6 @@
 package com.ems.EventsService.exceptions.global;
 
+import com.ems.EventsService.exceptions.custom.BasicValidationException;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.exceptions.custom.PaymentProcessingException;
@@ -51,6 +52,14 @@ public class GlobalExceptionHandler
     @ResponseStatus(HttpStatus.OK)
     public ResponseEntity<String> handleDataNotFoundException(DataNotFoundException ex) {
         return new ResponseEntity<>(ex.getMessage(), HttpStatus.NOT_FOUND);
+    }
+
+    @ExceptionHandler(BasicValidationException.class)
+    public ResponseEntity<Map<String, String>> handleBasicValidationException(BasicValidationException ex) {
+        Map<String, String> response = new HashMap<>();
+        response.put("error", ex.getMessage());
+        response.put("status", "FAILED");
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(response);
     }
 
 

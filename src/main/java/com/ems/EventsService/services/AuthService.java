@@ -5,6 +5,7 @@ import com.ems.EventsService.entity.AuthToken;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.UsersType;
+import com.ems.EventsService.exceptions.custom.BasicValidationException;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.mapper.AuthTokenMapper;
 import com.ems.EventsService.repositories.AuthTokenRepository;
@@ -38,7 +39,7 @@ public class AuthService {
 
     public LoginResponse authenticateUser(String customName, String password) {
         Users user = usersRepository.findByCustomNameAndRecStatus(customName, DBRecordStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
+                .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
 
         if (!password.equals(user.getPassword())) {
             throw new BusinessValidationException(ErrorMessages.INVALID_PASSWORD);
@@ -59,10 +60,10 @@ public class AuthService {
 
     public boolean isAdmin(String token) {
         AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.INVALID_TOKEN));
+                .orElseThrow(() -> new BasicValidationException(ErrorMessages.INVALID_TOKEN));
 
-        Users user = usersRepository.findById(authToken.getUserIdAuth())
-                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.USER_NOT_FOUND));
+        Users user = usersRepository.findByUserIdAndRecStatus(authToken.getUserIdAuth(), DBRecordStatus.ACTIVE)
+                .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
         logger.info("User is admin: {}", user.getUserType() == UsersType.ADMIN);
         return user.getUserType() == UsersType.ADMIN;
     }
@@ -70,7 +71,7 @@ public class AuthService {
     @Transactional
     public void validateToken(String token, int userId) {
         AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
-                .orElseThrow(() -> new BusinessValidationException(ErrorMessages.INVALID_TOKEN));
+                .orElseThrow(() -> new BasicValidationException(ErrorMessages.INVALID_TOKEN));
 
         if (authToken.getUserIdAuth() != userId) {
             throw new BusinessValidationException(ErrorMessages.USER_MISMATCH);
@@ -89,7 +90,7 @@ public class AuthService {
         logger.info("Token validated successfully");
     }
 
-    @Scheduled(fixedRate = 120000)
+    @Scheduled(fixedRate = 1800000)
     @Transactional
     public void updateExpiredTokens() {
         logger.info("Update expired tokens started");

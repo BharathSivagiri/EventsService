@@ -6,6 +6,7 @@ import com.ems.EventsService.enums.EventStatus;
 import com.ems.EventsService.model.EventsModel;
 
 import com.ems.EventsService.utility.DateUtils;
+import com.ems.EventsService.utility.constants.AppConstants;
 import org.springframework.stereotype.Component;
 
 import java.time.LocalDate;
@@ -25,7 +26,10 @@ public class EventsMapper
         events.setEventFee(Double.parseDouble(eventsModel.getEventFee()));
         events.setEventStatus(EventStatus.valueOf(eventsModel.getEventStatus().toUpperCase()));
         events.setRecStatus(DBRecordStatus.valueOf(eventsModel.getRecStatus().toUpperCase()));
-    
+        events.setCreatedBy(AppConstants.ADMIN_ROLE);
+        events.setUpdatedBy(AppConstants.ADMIN_ROLE);
+        events.setCreatedDate(String.valueOf(LocalDate.now()));
+        events.setUpdatedDate(String.valueOf(LocalDate.now()));
         return events;
     }
 

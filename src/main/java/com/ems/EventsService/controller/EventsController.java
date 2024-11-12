@@ -52,9 +52,6 @@ public class EventsController {
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
                                               @Valid @RequestBody EventsModel eventsModel) {
         authService.validateAdminAccess(token, userId);
-        eventsModel.setCreatedBy(String.valueOf(userId));
-        eventsModel.setUpdatedBy(String.valueOf(userId));
-
         eventsService.createEvent(eventsModel);
         String response = ErrorMessages.EVENT_CREATED;
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -71,7 +68,6 @@ public class EventsController {
                                               @PathVariable Integer eventId,
                                               @RequestBody EventsModel eventsModel) {
         authService.validateAdminAccess(token, userId);
-        eventsModel.setUpdatedBy(String.valueOf(userId));
         eventsService.updateEvent(eventId, eventsModel);
         return ResponseEntity.status(HttpStatus.OK).body(ErrorMessages.EVENT_UPDATED);
     }
@@ -140,7 +136,6 @@ public class EventsController {
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @RequestBody PaymentRequestDTO request) {
         authService.validateToken(token, userId);
-        request.setUserId(String.valueOf(userId)); // Ensure userId from header is used
         EventsRegistration cancelledRegistration = eventsService.cancelEventRegistration(request);
         return ResponseEntity.ok("Registration cancelled successfully and payment refunded");
     }
