@@ -72,7 +72,7 @@ public class EventsServiceImpl implements EventsService {
     EventValidation eventValidation;
 
     @Autowired
-    EventEmailService eventemailService;
+    EmailService eventemailService;
 
     @Override
     public EventsModel createEvent(EventsModel eventsModel) {
@@ -88,7 +88,7 @@ public class EventsServiceImpl implements EventsService {
     @Override
     public EventsModel updateEvent(Integer eventId, EventsModel eventsModel) {
         logger.info("Event update started for ID {}", eventId);
-        Events existingEvent = getEventById(eventId);
+        Events existingEvent = eventValidation.getEventById(eventId);
         Map<String, String> oldValues = captureEventState(existingEvent);
 
         existingEvent = eventsUpdateMapper.mapForUpdate(existingEvent, eventsModel);
@@ -104,7 +104,7 @@ public class EventsServiceImpl implements EventsService {
     @Transactional
     public void deleteEvent(Integer eventId) {
         logger.info("Event deletion started for ID {}", eventId);
-        Events event = getEventById(eventId);
+        Events event = eventValidation.getEventById(eventId);
         event = eventsStatusMapper.mapRecordStatus(event, DBRecordStatus.INACTIVE);
         eventsRepository.save(event);
         logger.info("Event deletion completed for ID {}", eventId);
@@ -127,7 +127,7 @@ public class EventsServiceImpl implements EventsService {
         Events event = processEventCapacity(eventId);
         EventsRegistration registration = createRegistration(transactionId, eventId, userId, createdBy);
 
-        Users user = getUserById(Integer.parseInt(userId));
+        Users user = eventValidation.getUserById(Integer.parseInt(userId));
         eventemailService.sendRegistrationEmail(user, event, registration.getId().toString());
 
         return registration;
@@ -137,7 +137,7 @@ public class EventsServiceImpl implements EventsService {
     public EventsRegistration cancelEventRegistration(PaymentRequestDTO request) {
         logger.info("Cancelling registration for event ID {}", request.getEventId());
         EventsRegistration registration = getRegistration(request);
-        Events event = getEventById(Integer.parseInt(request.getEventId()));
+        Events event = eventValidation.getEventById(Integer.parseInt(request.getEventId()));
 
         processRefund(request);
         updateEventCapacity(event, true);
@@ -157,7 +157,7 @@ public class EventsServiceImpl implements EventsService {
         logger.info("Processing event registration for user ID {}", request.getUserId());
         eventValidation.validateRegistration(request.getEventId(), request.getUserId());
 
-        Users user = getUserById(Integer.parseInt(request.getUserId()));
+        Users user = eventValidation.getUserById(Integer.parseInt(request.getUserId()));
         PaymentRequestDTO updatedRequest = paymentAccountMapper.mapUserAccountToPaymentRequest(request, user);
 
         Integer transactionId = paymentClientService.processPayment(updatedRequest);
@@ -185,15 +185,6 @@ public class EventsServiceImpl implements EventsService {
 
 
     // Helper methods
-    private Events getEventById(Integer eventId) {
-        return eventsRepository.findByEventIdAndRecStatus(eventId, DBRecordStatus.ACTIVE)
-                .orElseThrow(() -> new BasicValidationException(ErrorMessages.EVENT_NOT_FOUND));
-    }
-
-    private Users getUserById(Integer userId) {
-        return usersRepository.findByUserIdAndRecStatus(userId, DBRecordStatus.ACTIVE)
-                .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
-    }
 
     private Map<String, String> captureEventState(Events event) {
         return Map.of(
@@ -208,7 +199,7 @@ public class EventsServiceImpl implements EventsService {
     private void processEventReminders(Events event) {
         eventsRegistrationRepository.findByEventIdAndRecordStatus(event.getEventId(), DBRecordStatus.ACTIVE)
                 .forEach(registration -> {
-                    Users user = getUserById(registration.getUserId());
+                    Users user = eventValidation.getUserById(registration.getUserId());
                     eventemailService.sendReminderEmail(user, event, registration);
                 });
     }
@@ -238,17 +229,17 @@ public class EventsServiceImpl implements EventsService {
     }
 
     private void sendCancellationNotification(EventsRegistration registration, Events event) {
-        Users user = getUserById(registration.getUserId());
+        Users user = eventValidation.getUserById(registration.getUserId());
         eventemailService.sendEventCancellationEmail(user, event);
     }
 
     private void sendUpdateNotification(EventsRegistration registration, Events event, Map<String, String> oldValues) {
-        Users user = getUserById(registration.getUserId());
+        Users user = eventValidation.getUserById(registration.getUserId());
         eventemailService.sendEventUpdateEmail(user, event, oldValues);
     }
 
     private Events processEventCapacity(String eventId) {
-        Events event = getEventById(Integer.parseInt(eventId));
+        Events event = eventValidation.getEventById(Integer.parseInt(eventId));
         if (event.getEventCapacity() <= 0) {
             throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
         }
@@ -295,7 +286,7 @@ public class EventsServiceImpl implements EventsService {
 
     private Map<String, Object> createParticipantMap(EventsRegistration registration) {
         Map<String, Object> participant = new HashMap<>();
-        Users user = getUserById(registration.getUserId());
+        Users user = eventValidation.getUserById(registration.getUserId());
         participant.put("userId", user.getUserId());
         participant.put("username", user.getUsername());
         participant.put("registrationId", registration.getId());
@@ -350,7 +341,7 @@ public class EventsServiceImpl implements EventsService {
 
     private List<Events> fetchEventsList(Integer eventId) {
         return Optional.ofNullable(eventId)
-                .map(id -> Collections.singletonList(getEventById(id)))
+                .map(id -> Collections.singletonList(eventValidation.getEventById(id)))
                 .orElseGet(() -> eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE));
     }
 
