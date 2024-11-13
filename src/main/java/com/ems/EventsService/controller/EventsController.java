@@ -6,7 +6,7 @@ import com.ems.EventsService.dto.RegistrationResponseDTO;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.model.EventsModel;
-import com.ems.EventsService.services.AuthService;
+import com.ems.EventsService.services.implementations.AuthService;
 import com.ems.EventsService.services.EventsService;
 import com.ems.EventsService.utility.constants.AppConstants;
 import com.ems.EventsService.utility.constants.ErrorMessages;
@@ -91,17 +91,18 @@ public class EventsController {
     @EventsApiResponses.GetAllEventsResponses
     @Operation(
             summary = "View all events",
-            description = "Retrieves all active events based on user access level. Supports both keyword search and date range filtering"
+            description = "Retrieves events based on user access level. Admins can view all events and filter by status. Supports keyword search and date range filtering"
     )
     public ResponseEntity<?> getAllEvents(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @RequestParam(required = false) String keyword,
             @RequestParam(required = false) String dateA,
-            @RequestParam(required = false) String dateB) {
+            @RequestParam(required = false) String dateB,
+            @RequestParam(required = false) String status) {
         authService.validateToken(token, userId);
         boolean isAdmin = authService.isAdmin(token);
-        List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "", dateA, dateB);
+        List<?> events = eventsService.getAllEvents(isAdmin, keyword != null ? keyword : "", dateA, dateB, status);
         return ResponseEntity.ok(events);
     }
 

@@ -3,7 +3,7 @@ package com.ems.EventsService.controller;
 import com.ems.EventsService.configuration.AuthApiResponses;
 import com.ems.EventsService.dto.LoginRequest;
 import com.ems.EventsService.dto.LoginResponse;
-import com.ems.EventsService.services.AuthService;
+import com.ems.EventsService.services.implementations.AuthService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -18,7 +18,7 @@ import org.springframework.web.bind.annotation.*;
 public class AuthController {
 
     @Autowired
-    private AuthService authService;
+    AuthService authService;
 
     @PostMapping
     @AuthApiResponses.LoginResponses

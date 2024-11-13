@@ -1,4 +1,4 @@
-package com.ems.EventsService.services;
+package com.ems.EventsService.services.implementations;
 
 import com.ems.EventsService.dto.LoginResponse;
 import com.ems.EventsService.entity.AuthToken;
@@ -6,11 +6,12 @@ import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.UsersType;
 import com.ems.EventsService.exceptions.custom.BasicValidationException;
-import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.mapper.AuthTokenMapper;
+import com.ems.EventsService.mapper.RecordStatusMapper;
 import com.ems.EventsService.repositories.AuthTokenRepository;
 import com.ems.EventsService.repositories.UsersRepository;
 import com.ems.EventsService.utility.constants.ErrorMessages;
+import com.ems.EventsService.validations.AuthValidation;
 
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
@@ -29,21 +30,19 @@ public class AuthService {
     private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
 
     @Autowired
-    UsersRepository usersRepository;
+    private UsersRepository usersRepository;
 
     @Autowired
-    AuthTokenRepository authTokenRepository;
+    private AuthTokenRepository authTokenRepository;
 
     @Autowired
-    AuthTokenMapper authTokenMapper;
+    private AuthTokenMapper authTokenMapper;
 
     public LoginResponse authenticateUser(String customName, String password) {
         Users user = usersRepository.findByCustomNameAndRecStatus(customName, DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
 
-        if (!password.equals(user.getPassword())) {
-            throw new BusinessValidationException(ErrorMessages.INVALID_PASSWORD);
-        }
+        AuthValidation.validatePassword(password, user.getPassword());
         logger.info("User authenticated successfully");
         return generateToken(user);
     }
@@ -64,6 +63,7 @@ public class AuthService {
 
         Users user = usersRepository.findByUserIdAndRecStatus(authToken.getUserIdAuth(), DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
+
         logger.info("User is admin: {}", user.getUserType() == UsersType.ADMIN);
         return user.getUserType() == UsersType.ADMIN;
     }
@@ -73,20 +73,8 @@ public class AuthService {
         AuthToken authToken = authTokenRepository.findByAuthTokenAndRecStatus(token, DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BasicValidationException(ErrorMessages.INVALID_TOKEN));
 
-        if (authToken.getUserIdAuth() != userId) {
-            throw new BusinessValidationException(ErrorMessages.USER_MISMATCH);
-        }
-
-        if (authToken.getRecStatus() != DBRecordStatus.ACTIVE) {
-            throw new BusinessValidationException(ErrorMessages.TOKEN_EXPIRED);
-        }
-
-        LocalDateTime now = LocalDateTime.now();
-        if (now.isAfter(authToken.getResetTime())) {
-            authToken.setRecStatus(DBRecordStatus.INACTIVE);
-            authTokenRepository.save(authToken);
-            throw new BusinessValidationException(ErrorMessages.TOKEN_INACTIVE);
-        }
+        AuthValidation.validateTokenAccess(authToken, userId);
+        AuthValidation.validateAndHandleTokenExpiry(authToken, LocalDateTime.now(), authTokenRepository);
         logger.info("Token validated successfully");
     }
 
@@ -96,19 +84,17 @@ public class AuthService {
         logger.info("Update expired tokens started");
         LocalDateTime now = LocalDateTime.now();
         List<AuthToken> expiredTokens = authTokenRepository.findByResetTimeBeforeAndRecStatus(now, DBRecordStatus.ACTIVE);
-        for (AuthToken token : expiredTokens) {
-            token.setRecStatus(DBRecordStatus.INACTIVE);
+
+        expiredTokens.forEach(token -> {
+            RecordStatusMapper.setInactiveStatus(token);
             authTokenRepository.save(token);
-        }
+        });
+
         logger.info("Expired tokens updated successfully");
     }
 
     public void validateAdminAccess(String token, int userId) {
         validateToken(token, userId);
-        if (!isAdmin(token)) {
-            throw new BusinessValidationException(ErrorMessages.ACCESS_DENIED);
-        }
+        AuthValidation.validateAdminPrivilieges(isAdmin(token));
     }
-
 }
-
