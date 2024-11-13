@@ -7,18 +7,15 @@ import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
-import com.ems.EventsService.enums.RegistrationStatus;
 import com.ems.EventsService.exceptions.custom.BasicValidationException;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.exceptions.custom.DataNotFoundException;
-import com.ems.EventsService.exceptions.custom.DateInvalidException;
 import com.ems.EventsService.mapper.*;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
 import com.ems.EventsService.repositories.UsersRepository;
 import com.ems.EventsService.services.EventsService;
-import com.ems.EventsService.utility.DateUtils;
 import com.ems.EventsService.utility.constants.ErrorMessages;
 import com.ems.EventsService.utility.constants.AppConstants;
 import com.ems.EventsService.repositories.EmailTemplatesRepository;
@@ -33,9 +30,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -57,9 +52,6 @@ public class EventsServiceImpl implements EventsService {
     EventsMapper eventsMapper;
 
     @Autowired
-    ParticipantEventDTOMapper participantEventDTOMapper;
-
-    @Autowired
     EventsRegistrationMapper eventsRegistrationMapper;
 
     @Autowired
@@ -76,6 +68,12 @@ public class EventsServiceImpl implements EventsService {
 
     @Autowired
     EventsUpdateMapper eventsUpdateMapper;
+
+    @Autowired
+    EventsStatusMapper eventsStatusMapper;
+
+    @Autowired
+    PaymentAccountMapper paymentAccountMapper;
 
     @Override
     public EventsModel createEvent(EventsModel eventsModel) {
@@ -167,6 +165,7 @@ public class EventsServiceImpl implements EventsService {
 
         return eventsMapper.toModel(updatedEvent);
     }
+
     @Override
     @Transactional
     public void deleteEvent(Integer eventId) {
@@ -175,7 +174,7 @@ public class EventsServiceImpl implements EventsService {
         Events event = eventsRepository.findByEventIdAndRecStatus(eventId, DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BasicValidationException(ErrorMessages.EVENT_NOT_FOUND));
 
-        event.setRecStatus(DBRecordStatus.INACTIVE);
+        event = eventsStatusMapper.mapRecordStatus(event, DBRecordStatus.INACTIVE);
 
         eventsRepository.save(event);
 
@@ -222,7 +221,6 @@ public class EventsServiceImpl implements EventsService {
         logger.info("Fetching all events completed");
         return result;
     }
-
 
     @Transactional
     public EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy) {
@@ -389,22 +387,20 @@ public List<Map<String, Object>> getEventParticipants(Integer eventId) {
 
     @Transactional
     public EventsRegistration processEventRegistration(PaymentRequestDTO request) throws BusinessValidationException {
-        // Check if already registered
+        PaymentRequestDTO finalRequest = request;
         boolean isAlreadyRegistered = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(request.getEventId()), DBRecordStatus.ACTIVE)
                 .stream()
-                .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(request.getUserId())));
+                .anyMatch(reg -> reg.getUserId().equals(Integer.parseInt(finalRequest.getUserId())));
 
         if (isAlreadyRegistered) {
             throw new BusinessValidationException(ErrorMessages.USER_ALREADY_REGISTERED);
         }
 
-        // Get user details to fetch account number
-        Users user = usersRepository.findById(Integer.parseInt(request.getUserId()))
+        Users user = usersRepository.findByUserIdAndRecStatus(Integer.parseInt(request.getUserId()), DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
 
-        // Set the account number in the payment request
-        request.setAccountNumber(user.getAccount());
+        request = paymentAccountMapper.mapUserAccountToPaymentRequest(request, user);
 
         Integer transactionId = paymentClientService.processPayment(request);
 
@@ -415,6 +411,7 @@ public List<Map<String, Object>> getEventParticipants(Integer eventId) {
                 request.getCreatedBy()
         );
     }
+
 
     @ConditionalOnProperty(value = "scheduler.enabled", havingValue = "true", matchIfMissing = false)
     @Scheduled(cron = "${scheduler.cron}")
