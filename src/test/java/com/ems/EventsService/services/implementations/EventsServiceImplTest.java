@@ -1,6 +1,6 @@
 //package com.ems.EventsService.services.implementations;
 //
-//import com.ems.EventsService.dto.PaymentRequestDTO;
+//import com.ems.EventsService.model.PaymentRequestDTO;
 //import com.ems.EventsService.entity.EmailTemplates;
 //import com.ems.EventsService.entity.Events;
 //import com.ems.EventsService.entity.EventsRegistration;

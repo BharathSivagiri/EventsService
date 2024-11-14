@@ -1,6 +1,6 @@
 package com.ems.EventsService.configuration;
 
-import com.ems.EventsService.dto.ErrorResponse;
+import com.ems.EventsService.model.ErrorResponse;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
 import io.swagger.v3.oas.annotations.responses.ApiResponse;

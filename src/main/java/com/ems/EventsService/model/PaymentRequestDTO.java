@@ -1,4 +1,4 @@
-package com.ems.EventsService.dto;
+package com.ems.EventsService.model;
 
 import lombok.Data;
 

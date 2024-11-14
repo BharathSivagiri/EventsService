@@ -10,8 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Repository
-public interface EventsRepository extends JpaRepository<Events, Integer>
-{
+public interface EventsRepository extends JpaRepository<Events, Integer> {
     List<Events> findByRecStatusAndEventNameContainingIgnoreCaseOrEventLocationContainingIgnoreCase(
             DBRecordStatus recStatus, String eventName, String eventLocation);
 

@@ -17,10 +17,10 @@ import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
-public class EmailService {
+public class EmailServiceMainImpl {
     private final EmailTemplatesRepository emailTemplatesRepository;
     private final EmailServiceImpl emailService;
-    private final Logger logger = LoggerFactory.getLogger(EmailService.class);
+    private final Logger logger = LoggerFactory.getLogger(EmailServiceMainImpl.class);
 
     public void sendRegistrationEmail(Users user, Events event, String registrationId) {
         EmailTemplates template = getEmailTemplate("REGISTRATION_SUCCESS");

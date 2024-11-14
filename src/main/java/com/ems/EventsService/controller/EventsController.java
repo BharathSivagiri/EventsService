@@ -1,12 +1,12 @@
 package com.ems.EventsService.controller;
 
 import com.ems.EventsService.configuration.EventsApiResponses;
-import com.ems.EventsService.dto.PaymentRequestDTO;
-import com.ems.EventsService.dto.RegistrationResponseDTO;
+import com.ems.EventsService.model.PaymentRequestDTO;
+import com.ems.EventsService.model.RegistrationResponseDTO;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.model.EventsModel;
-import com.ems.EventsService.services.implementations.AuthService;
+import com.ems.EventsService.services.implementations.AuthServiceImpl;
 import com.ems.EventsService.services.EventsService;
 import com.ems.EventsService.utility.constants.AppConstants;
 import com.ems.EventsService.utility.constants.ErrorMessages;
@@ -36,7 +36,7 @@ public class EventsController {
     private static final Logger logger = LoggerFactory.getLogger(EventsController.class);
 
     @Autowired
-    AuthService authService;
+    AuthServiceImpl authService;
 
     @Autowired
     RestTemplate restTemplate;
@@ -45,8 +45,8 @@ public class EventsController {
     @ResponseStatus(HttpStatus.CREATED)
     @EventsApiResponses.CreateEventResponses
     @Operation(
-        summary = "Create a new event",
-        description = "Creates a new event in the system"
+            summary = "Create a new event",
+            description = "Creates a new event in the system"
     )
     public ResponseEntity<String> createEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
@@ -60,8 +60,8 @@ public class EventsController {
     @PutMapping("/update/{eventId}")
     @EventsApiResponses.UpdateEventResponses
     @Operation(
-        summary = "Update an event",
-        description = "Updates an existing event in the system"
+            summary = "Update an event",
+            description = "Updates an existing event in the system"
     )
     public ResponseEntity<String> updateEvent(@RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
                                               @RequestHeader(AppConstants.USERID_HEADER) int userId,
@@ -75,8 +75,8 @@ public class EventsController {
     @DeleteMapping("/delete/{eventId}")
     @EventsApiResponses.DeleteEventResponses
     @Operation(
-        summary = "Delete an event",
-        description = "Changes the record status from active to inactive"
+            summary = "Delete an event",
+            description = "Changes the record status from active to inactive"
     )
     public ResponseEntity<String> deleteEvent(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
@@ -109,28 +109,28 @@ public class EventsController {
     @PostMapping("/registration")
     @EventsApiResponses.ProcessRegistrationResponses
     @Operation(
-        summary = "Register for an event",
-        description = "Registers a user for an event"
+            summary = "Register for an event",
+            description = "Registers a user for an event"
     )
     public ResponseEntity<?> processRegistration(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
-            @RequestBody PaymentRequestDTO request)  throws BusinessValidationException {
+            @RequestBody PaymentRequestDTO request) throws BusinessValidationException {
         authService.validateToken(token, userId);
-            EventsRegistration registration = eventsService.processEventRegistration(request);
-            return ResponseEntity.status(HttpStatus.CREATED)
-                    .body(new RegistrationResponseDTO(
-                            registration.getId(),
-                            "SUCCESS",
-                            "Registration completed successfully"
-                    ));
+        EventsRegistration registration = eventsService.processEventRegistration(request);
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(new RegistrationResponseDTO(
+                        registration.getId(),
+                        "SUCCESS",
+                        "Registration completed successfully"
+                ));
     }
 
     @PostMapping("/registration/cancel")
     @EventsApiResponses.CancelRegistrationResponses
     @Operation(
-        summary = "Cancel registration for an event",
-        description = "Cancels a user's registration for an event"
+            summary = "Cancel registration for an event",
+            description = "Cancels a user's registration for an event"
     )
     public ResponseEntity<?> cancelRegistration(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
@@ -144,8 +144,8 @@ public class EventsController {
     @GetMapping("/users/view-participants")
     @EventsApiResponses.GetEventParticipantsResponses
     @Operation(
-        summary = "Get event participants",
-        description = "Returns list of participants for events"
+            summary = "Get event participants",
+            description = "Returns list of participants for events"
     )
     public ResponseEntity<List<Map<String, Object>>> getEventParticipants(
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,

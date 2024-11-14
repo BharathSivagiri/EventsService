@@ -1,7 +1,7 @@
 //package com.ems.EventsService.controller;
 //
-//import com.ems.EventsService.dto.LoginRequest;
-//import com.ems.EventsService.dto.LoginResponse;
+//import com.ems.EventsService.model.LoginRequest;
+//import com.ems.EventsService.model.LoginResponse;
 //import com.ems.EventsService.services.implementations.AuthService;
 //import org.junit.jupiter.api.BeforeEach;
 //import org.junit.jupiter.api.Test;

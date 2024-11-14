@@ -1,6 +1,6 @@
 package com.ems.EventsService.services.implementations;
 
-import com.ems.EventsService.dto.LoginResponse;
+import com.ems.EventsService.model.LoginResponse;
 import com.ems.EventsService.entity.AuthToken;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
@@ -25,9 +25,9 @@ import java.util.List;
 import java.util.UUID;
 
 @Service
-public class AuthService {
+public class AuthServiceImpl {
 
-    private static final Logger logger = LoggerFactory.getLogger(AuthService.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthServiceImpl.class);
 
     @Autowired
     private UsersRepository usersRepository;

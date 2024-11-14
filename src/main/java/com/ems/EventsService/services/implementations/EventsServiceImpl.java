@@ -1,6 +1,6 @@
 package com.ems.EventsService.services.implementations;
 
-import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.model.PaymentRequestDTO;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.entity.Users;
@@ -46,7 +46,7 @@ public class EventsServiceImpl implements EventsService {
     EventsRegistrationMapper eventsRegistrationMapper;
 
     @Autowired
-    PaymentClientService paymentClientService;
+    PaymentClientServiceImpl paymentClientService;
 
     @Autowired
     PaymentRequestMapper paymentRequestMapper;
@@ -64,7 +64,7 @@ public class EventsServiceImpl implements EventsService {
     EventValidation eventValidation;
 
     @Autowired
-    EmailService eventemailService;
+    EmailServiceMainImpl eventemailService;
 
     @Override
     public EventsModel createEvent(EventsModel eventsModel) {

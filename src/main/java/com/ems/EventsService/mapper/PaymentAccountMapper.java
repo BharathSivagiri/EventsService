@@ -1,6 +1,6 @@
 package com.ems.EventsService.mapper;
 
-import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.model.PaymentRequestDTO;
 import com.ems.EventsService.entity.Users;
 import org.springframework.stereotype.Component;
 

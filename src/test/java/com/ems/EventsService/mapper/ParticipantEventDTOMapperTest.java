@@ -1,6 +1,6 @@
 //package com.ems.EventsService.mapper;
 //
-//import com.ems.EventsService.dto.ParticipantEventDTO;
+//import com.ems.EventsService.model.ParticipantEventDTO;
 //import com.ems.EventsService.entity.Events;
 //import com.ems.EventsService.enums.EventStatus;
 //import org.junit.jupiter.api.BeforeEach;

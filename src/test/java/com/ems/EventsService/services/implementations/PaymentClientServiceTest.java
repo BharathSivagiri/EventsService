@@ -1,6 +1,6 @@
 //package com.ems.EventsService.services.implementations;
 //
-//import com.ems.EventsService.dto.PaymentRequestDTO;
+//import com.ems.EventsService.model.PaymentRequestDTO;
 //import org.junit.jupiter.api.BeforeEach;
 //import org.junit.jupiter.api.Test;
 //import org.junit.jupiter.api.extension.ExtendWith;

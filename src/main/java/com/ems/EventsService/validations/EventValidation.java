@@ -1,6 +1,6 @@
 package com.ems.EventsService.validations;
 
-import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.model.PaymentRequestDTO;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.entity.Users;
@@ -25,6 +25,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 public class EventValidation {
+
     private final EventsRepository eventsRepository;
     private final UsersRepository usersRepository;
     private final EventsRegistrationRepository eventsRegistrationRepository;

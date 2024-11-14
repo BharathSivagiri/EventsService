@@ -1,7 +1,7 @@
 //package com.ems.EventsService.controller;
 //
-//import com.ems.EventsService.dto.PaymentRequestDTO;
-//import com.ems.EventsService.dto.RegistrationResponseDTO;
+//import com.ems.EventsService.model.PaymentRequestDTO;
+//import com.ems.EventsService.model.RegistrationResponseDTO;
 //import com.ems.EventsService.entity.EventsRegistration;
 //import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 //import com.ems.EventsService.model.EventsModel;
