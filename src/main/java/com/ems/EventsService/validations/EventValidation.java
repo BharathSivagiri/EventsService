@@ -1,10 +1,13 @@
 package com.ems.EventsService.validations;
 
+import com.ems.EventsService.dto.PaymentRequestDTO;
 import com.ems.EventsService.entity.Events;
+import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.exceptions.custom.BasicValidationException;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
+import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
@@ -17,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +50,12 @@ public class EventValidation {
         }
     }
 
+    public void validateEventCapacity(Events event){
+        if (event.getEventCapacity() <= 0) {
+            throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
+        }
+    }
+
     public void validateRegistration(String eventId, String userId) {
         boolean isAlreadyRegistered = eventsRegistrationRepository
                 .findByEventIdAndRecordStatus(Integer.parseInt(eventId), DBRecordStatus.ACTIVE)
@@ -66,4 +76,20 @@ public class EventValidation {
         return usersRepository.findByUserIdAndRecStatus(userId, DBRecordStatus.ACTIVE)
                 .orElseThrow(() -> new BasicValidationException(ErrorMessages.USER_NOT_FOUND));
     }
+
+    public EventsRegistration getRegistration(PaymentRequestDTO request) {
+        return eventsRegistrationRepository
+                .findByEventIdAndUserIdAndRecordStatus(
+                        Integer.parseInt(request.getEventId()),
+                        Integer.parseInt(request.getUserId()),
+                        DBRecordStatus.ACTIVE
+                ).orElseThrow(() -> new BasicValidationException(ErrorMessages.REGISTRATION_NOT_FOUND));
+    }
+
+    public void validateEventResults(List<?> results) {
+        if (results.isEmpty()) {
+            throw new DataNotFoundException(ErrorMessages.NO_EVENTS_FOUND);
+        }
+    }
+
 }

@@ -6,16 +6,11 @@ import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.entity.Users;
 import com.ems.EventsService.enums.DBRecordStatus;
 import com.ems.EventsService.enums.EventStatus;
-import com.ems.EventsService.exceptions.custom.BasicValidationException;
-import com.ems.EventsService.exceptions.custom.BusinessValidationException;
-import com.ems.EventsService.exceptions.custom.DataNotFoundException;
 import com.ems.EventsService.mapper.*;
 import com.ems.EventsService.model.EventsModel;
 import com.ems.EventsService.repositories.EventsRegistrationRepository;
 import com.ems.EventsService.repositories.EventsRepository;
-import com.ems.EventsService.repositories.UsersRepository;
 import com.ems.EventsService.services.EventsService;
-import com.ems.EventsService.utility.constants.ErrorMessages;
 import com.ems.EventsService.utility.constants.AppConstants;
 
 import com.ems.EventsService.validations.EventValidation;
@@ -40,9 +35,6 @@ public class EventsServiceImpl implements EventsService {
 
     @Autowired
     EventsRepository eventsRepository;
-
-    @Autowired
-    UsersRepository usersRepository;
 
     @Autowired
     EventsRegistrationRepository eventsRegistrationRepository;
@@ -115,7 +107,7 @@ public class EventsServiceImpl implements EventsService {
         logger.info("Fetching events with filters - Admin access: {}, Status filter: {}", isAdmin, status);
         List<Events> events = fetchEventsWithFilters(dateA, dateB, keyword);
         List<?> result = mapEventsToResponse(events, isAdmin, status);
-        validateEventResults(result);
+        eventValidation.validateEventResults(result);
         return result;
     }
 
@@ -136,7 +128,7 @@ public class EventsServiceImpl implements EventsService {
     @Transactional
     public EventsRegistration cancelEventRegistration(PaymentRequestDTO request) {
         logger.info("Cancelling registration for event ID {}", request.getEventId());
-        EventsRegistration registration = getRegistration(request);
+        EventsRegistration registration = eventValidation.getRegistration(request);
         Events event = eventValidation.getEventById(Integer.parseInt(request.getEventId()));
 
         processRefund(request);
@@ -240,9 +232,7 @@ public class EventsServiceImpl implements EventsService {
 
     private Events processEventCapacity(String eventId) {
         Events event = eventValidation.getEventById(Integer.parseInt(eventId));
-        if (event.getEventCapacity() <= 0) {
-            throw new BusinessValidationException(ErrorMessages.EVENT_FULL_CAPACITY);
-        }
+        eventValidation.validateEventCapacity(event);
         updateEventCapacity(event, false);
         return event;
     }
@@ -322,21 +312,6 @@ public class EventsServiceImpl implements EventsService {
         }
 
         return event.getRecStatus() == DBRecordStatus.valueOf(status.toUpperCase());
-    }
-
-    private void validateEventResults(List<?> results) {
-        if (results.isEmpty()) {
-            throw new DataNotFoundException(ErrorMessages.NO_EVENTS_FOUND);
-        }
-    }
-
-    private EventsRegistration getRegistration(PaymentRequestDTO request) {
-        return eventsRegistrationRepository
-                .findByEventIdAndUserIdAndRecordStatus(
-                        Integer.parseInt(request.getEventId()),
-                        Integer.parseInt(request.getUserId()),
-                        DBRecordStatus.ACTIVE
-                ).orElseThrow(() -> new BasicValidationException(ErrorMessages.REGISTRATION_NOT_FOUND));
     }
 
     private List<Events> fetchEventsList(Integer eventId) {

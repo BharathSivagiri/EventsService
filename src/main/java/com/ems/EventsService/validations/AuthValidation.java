@@ -6,9 +6,13 @@ import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.mapper.RecordStatusMapper;
 import com.ems.EventsService.repositories.AuthTokenRepository;
 import com.ems.EventsService.utility.constants.ErrorMessages;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
+@Service
+@RequiredArgsConstructor
 public class AuthValidation {
 
     public static void validatePassword(String inputPassword, String storedPassword) {
