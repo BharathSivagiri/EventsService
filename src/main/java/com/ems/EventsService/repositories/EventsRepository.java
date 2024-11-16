@@ -24,4 +24,7 @@ public interface EventsRepository extends JpaRepository<Events, Integer> {
     List<Events> findByEventDateAndRecStatus(String eventDate, DBRecordStatus recordStatus);
 
     Optional<Events> findByEventIdAndRecStatus(Integer eventId, DBRecordStatus recordStatus);
+
+    List<Events> findByEventIdInAndRecStatus(List<Integer> eventIds, DBRecordStatus recordStatus);
+
 }

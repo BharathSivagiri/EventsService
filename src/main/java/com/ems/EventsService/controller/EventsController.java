@@ -151,8 +151,8 @@ public class EventsController {
             @RequestHeader(AppConstants.AUTHORIZATION_HEADER) String token,
             @RequestHeader(AppConstants.USERID_HEADER) int userId,
             @RequestParam(required = false) Integer eventId) {
-        authService.validateAdminAccess(token, userId);
-        return ResponseEntity.ok(eventsService.getEventParticipants(eventId));
+        authService.validateToken(token, userId);
+        return ResponseEntity.ok(eventsService.getEventParticipants(eventId, userId));
     }
 }
 

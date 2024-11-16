@@ -19,7 +19,7 @@ public interface EventsService {
 
     EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy);
 
-    List<Map<String, Object>> getEventParticipants(Integer eventId);
+    List<Map<String, Object>> getEventParticipants(Integer eventId, Integer userId);
 
     EventsRegistration cancelEventRegistration(PaymentRequestDTO request);
 

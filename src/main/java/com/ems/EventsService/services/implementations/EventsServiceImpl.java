@@ -136,12 +136,11 @@ public class EventsServiceImpl implements EventsService {
 
         return eventsRegistrationMapper.toCancelledRegistration(registration, request.getCreatedBy());
     }
-
     @Override
-    public List<Map<String, Object>> getEventParticipants(Integer eventId) {
-        logger.info("Fetching participants for event ID {}", eventId);
-        List<Events> events = fetchEventsList(eventId);
-        return mapParticipantsData(events);
+    public List<Map<String, Object>> getEventParticipants(Integer eventId, Integer userId) {
+        logger.info("Fetching participants for event ID {} and user ID {}", eventId, userId);
+        List<Events> events = fetchEventsList(eventId, userId);
+        return mapParticipantsData(events, userId);
     }
 
     @Transactional
@@ -252,24 +251,31 @@ public class EventsServiceImpl implements EventsService {
         paymentClientService.processRefund(refundRequest);
     }
 
-    private List<Map<String, Object>> mapParticipantsData(List<Events> events) {
+    private List<Map<String, Object>> mapParticipantsData(List<Events> events, Integer userId) {
         return events.stream()
-                .map(this::createEventParticipantsMap)
+                .map(event -> createEventParticipantsMap(event, userId))
                 .collect(Collectors.toList());
     }
 
-    private Map<String, Object> createEventParticipantsMap(Events event) {
+    private Map<String, Object> createEventParticipantsMap(Events event, Integer userId) {
         Map<String, Object> eventData = new HashMap<>();
         eventData.put("eventId", event.getEventId());
         eventData.put("eventName", event.getEventName());
-        eventData.put("Participants", getParticipantsList(event.getEventId()));
+        eventData.put("Participants", getParticipantsList(event.getEventId(), userId));
         return eventData;
     }
 
-    private List<Map<String, Object>> getParticipantsList(Integer eventId) {
-        return eventsRegistrationRepository
-                .findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE)
-                .stream()
+    private List<Map<String, Object>> getParticipantsList(Integer eventId, Integer userId) {
+        List<EventsRegistration> registrations = eventsRegistrationRepository
+                .findByEventIdAndRecordStatus(eventId, DBRecordStatus.ACTIVE);
+
+        if (userId != null) {
+            registrations = registrations.stream()
+                    .filter(reg -> reg.getUserId().equals(userId))
+                    .collect(Collectors.toList());
+        }
+
+        return registrations.stream()
                 .map(this::createParticipantMap)
                 .collect(Collectors.toList());
     }
@@ -314,11 +320,23 @@ public class EventsServiceImpl implements EventsService {
         return event.getRecStatus() == DBRecordStatus.valueOf(status.toUpperCase());
     }
 
-    private List<Events> fetchEventsList(Integer eventId) {
-        return Optional.ofNullable(eventId)
-                .map(id -> Collections.singletonList(eventValidation.getEventById(id)))
-                .orElseGet(() -> eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE));
-    }
+        private List<Events> fetchEventsList(Integer eventId, Integer userId) {
+            if (eventId != null) {
+                return Collections.singletonList(eventValidation.getEventById(eventId));
+            }
+
+            if (userId != null) {
+                List<Integer> eventIds = eventsRegistrationRepository
+                    .findByUserIdAndRecordStatus(userId, DBRecordStatus.ACTIVE)
+                    .stream()
+                    .map(EventsRegistration::getEventId)
+                    .collect(Collectors.toList());
+
+                return eventsRepository.findByEventIdInAndRecStatus(eventIds, DBRecordStatus.ACTIVE);
+            }
+
+            return eventsRepository.findByRecStatus(DBRecordStatus.ACTIVE);
+        }
 
 
 }
