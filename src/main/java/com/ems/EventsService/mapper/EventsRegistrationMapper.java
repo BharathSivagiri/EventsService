@@ -25,5 +25,13 @@ public class EventsRegistrationMapper
         registration.setLastUpdatedBy(createdBy);
         return registration;
     }
+
+    public EventsRegistration toCancelledRegistration(EventsRegistration registration, String updatedBy) {
+        registration.setRegistrationStatus(RegistrationStatus.CANCELLED);
+        registration.setRecordStatus(DBRecordStatus.INACTIVE);
+        registration.setLastUpdatedDate(LocalDateTime.now().toString());
+        registration.setLastUpdatedBy(updatedBy);
+        return registration;
+    }
 }
 

@@ -1,6 +1,5 @@
-package com.ems.EventsService.mapper;
+package com.ems.EventsService.model;
 
-import com.ems.EventsService.dto.ParticipantEventDTO;
 import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.utility.constants.AppConstants;
 

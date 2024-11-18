@@ -1,5 +1,6 @@
 package com.ems.EventsService.repositories;
 
+import com.ems.EventsService.entity.Events;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.enums.DBRecordStatus;
 
@@ -15,4 +16,8 @@ public interface EventsRegistrationRepository extends JpaRepository<EventsRegist
     List<EventsRegistration> findByEventIdAndRecordStatus(Integer eventId, DBRecordStatus recordStatus);
 
     Optional<EventsRegistration> findByEventIdAndUserIdAndRecordStatus(Integer eventId, Integer userId, DBRecordStatus recordStatus);
+
+    List<EventsRegistration> findByUserIdAndRecordStatus(Integer userId, DBRecordStatus recordStatus);
 }
+
+

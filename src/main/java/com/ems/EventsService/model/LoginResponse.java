@@ -1,4 +1,4 @@
-package com.ems.EventsService.dto;
+package com.ems.EventsService.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -7,5 +7,6 @@ import lombok.Data;
 @AllArgsConstructor
 public class LoginResponse {
     private String token;
+    private int userId;
 }
 

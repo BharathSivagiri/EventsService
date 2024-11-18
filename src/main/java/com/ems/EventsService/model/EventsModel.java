@@ -20,7 +20,7 @@ public class EventsModel {
 
     private String eventDescription;
 
-    @Pattern(regexp = "^\\d{4}\\d{2}\\d{2}$", message = "Birth date must be in the format YYYYMMDD")
+    @Pattern(regexp = "^\\d{4}\\d{2}\\d{2}$", message = "Event date must be in the format YYYYMMDD")
     private String eventDate;
 
     @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Location must contain only letters and spaces")
