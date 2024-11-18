@@ -1,6 +1,6 @@
 package com.ems.EventsService.services.implementations;
 
-import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.model.PaymentRequestDTO;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -13,12 +13,12 @@ import org.springframework.web.client.RestTemplate;
 
 @Service
 @Slf4j
-public class PaymentClientService {
+public class PaymentClientServiceImpl {
 
     private final RestTemplate restTemplate;
     private final String paymentsServiceUrl;
 
-    public PaymentClientService(
+    public PaymentClientServiceImpl(
             RestTemplate restTemplate,
             @Value("${payments.service.url}") String paymentsServiceUrl) {
         this.restTemplate = restTemplate;

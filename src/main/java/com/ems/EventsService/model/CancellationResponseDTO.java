@@ -1,13 +1,15 @@
-package com.ems.EventsService.dto;
+package com.ems.EventsService.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;
 
 @Data
 @AllArgsConstructor
-public class RegistrationResponseDTO {
+public class CancellationResponseDTO {
     private Integer registrationId;
     private String status;
     private String message;
+    private Double refundAmount;
+    private String refundTransactionId;
 }
 

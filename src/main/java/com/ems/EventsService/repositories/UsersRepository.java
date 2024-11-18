@@ -10,4 +10,6 @@ import java.util.Optional;
 public interface UsersRepository extends JpaRepository<Users, Integer>
 {
     Optional<Users>findByCustomNameAndRecStatus(String customName, DBRecordStatus recStatus);
+
+    Optional<Users>findByUserIdAndRecStatus(Integer userId, DBRecordStatus recStatus);
 }

@@ -1,6 +1,6 @@
 package com.ems.EventsService.services;
 
-import com.ems.EventsService.dto.PaymentRequestDTO;
+import com.ems.EventsService.model.PaymentRequestDTO;
 import com.ems.EventsService.entity.EventsRegistration;
 import com.ems.EventsService.exceptions.custom.BusinessValidationException;
 import com.ems.EventsService.model.EventsModel;
@@ -15,11 +15,11 @@ public interface EventsService {
 
     void deleteEvent(Integer eventId);
 
-    List<?> getAllEvents(boolean isAdmin, String keyword);
+    List<?> getAllEvents(boolean isAdmin, String keyword, String dateA, String dateB, String status);
 
     EventsRegistration registerForEvent(String transactionId, String eventId, String userId, String createdBy);
 
-    List<Map<String, Object>> getEventParticipants(Integer eventId);
+    List<Map<String, Object>> getEventParticipants(Integer eventId, Integer userId);
 
     EventsRegistration cancelEventRegistration(PaymentRequestDTO request);
 
